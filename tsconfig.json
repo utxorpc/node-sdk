@@ -1,12 +1,12 @@
 {
   "compilerOptions": {
-    "target": "esnext",
-    "module": "ES2020",
+    "target": "ES2018",
+    "module": "Node16",
     "declaration": true,
     "outDir": "./lib",
     "strict": true,
     "esModuleInterop": true,
-    "moduleResolution": "node",
+    "moduleResolution": "Node16",
     "noImplicitAny": false
   },
   "include": ["src"],

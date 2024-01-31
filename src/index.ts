@@ -1,7 +1,6 @@
-// import { Block } from "@utxorpc-web/cardano-spec/utxorpc/cardano/v1/cardano_pb.js";
 import { PromiseClient, createPromiseClient } from "@connectrpc/connect";
 import { createGrpcTransport } from "@connectrpc/connect-node";
-import { ChainSyncService } from "@utxorpc/sync-spec/lib/sync_connect.js";
+import { ChainSyncService } from "@utxorpc/sync-spec/utxorpc/sync/v1/sync_connect.js";
 
 export class CardanoClientV1Alpha {
   headers: Record<string, string>;
