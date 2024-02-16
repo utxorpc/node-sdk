@@ -1,6 +1,6 @@
 {
   "name": "@utxorpc/sdk",
-  "version": "1.0.0-alpha.1",
+  "version": "0.1.0",
   "description": "A client library to interact with UTxO RPC compliant endpoints",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
@@ -26,10 +26,9 @@
     "typescript": "^5.1.3"
   },
   "dependencies": {
-    "@connectrpc/connect": "^1.1.2",
-    "@connectrpc/connect-node": "^1.3.0",
+    "@connectrpc/connect": "^1.3",
+    "@connectrpc/connect-node": "^1.3",
     "@types/node": "^20.11.10",
-    "@utxorpc/cardano-spec": "^1.0.0-alpha.1",
-    "@utxorpc/sync-spec": "^1.0.0-alpha.2"
+    "@utxorpc/spec": "^0.3.0"
   }
 }
