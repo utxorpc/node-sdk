@@ -1,17 +1,14 @@
-import { CardanoSyncClient } from "../";
+import { CardanoSyncClient } from "../src/index.js";
 
 async function test() {
   let client = new CardanoSyncClient({
-    uri: "https://preview.utxorpc-v0.demeter.run",
-    headers: {
-      "dmtr-api-key": "dmtr_utxorpc10zrj5dglh53dn8lhgk4p2lffuuu7064j",
-    },
+    uri: "http://localhost:50051",
   });
 
   let tip = client.followTip([
     {
-      slot: 41396036,
-      hash: "6ad7dd2589de22e9c18f341c66eff01ae7ca9a82726ac53e0b7bc8a628feb4d5",
+      slot: 54131816,
+      hash: "34c65aba4b299113a488b74e2efe3a3dd272d25b470d25f374b2c693d4386535",
     },
   ]);
 
@@ -19,5 +16,4 @@ async function test() {
     console.log(event);
   }
 }
-
 test().catch(console.error);
