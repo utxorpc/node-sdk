@@ -7,7 +7,7 @@ import { createGrpcTransport } from "@connectrpc/connect-node";
 
 import * as Cardano from "@utxorpc/spec/lib/utxorpc/v1alpha/cardano/cardano_pb.js";
 
-import { ChainSyncService } from "@utxorpc/spec/lib/utxorpc/v1alpha/sync/sync_connect.js";
+import { SyncService } from "@utxorpc/spec/lib/utxorpc/v1alpha/sync/sync_connect.js";
 
 import {
   AnyChainBlock,
@@ -40,23 +40,23 @@ export type TipEvent<BlockT, PointT> =
 
 export type ClientBuilderOptions = {
   uri: string;
-  headers: Record<string, string>;
+  headers?: Record<string, string>;
 };
 
 export class SyncClient<BlockT, PointT> {
-  inner: PromiseClient<typeof ChainSyncService>;
+  inner: PromiseClient<typeof SyncService>;
   chain: Chain<BlockT, PointT>;
 
   constructor(options: ClientBuilderOptions, chain: Chain<BlockT, PointT>) {
     let headerInterceptor = metadataInterceptor(options);
-
+    
     const transport = createGrpcTransport({
       httpVersion: "2",
       baseUrl: options.uri,
       interceptors: [headerInterceptor],
     });
 
-    this.inner = createPromiseClient(ChainSyncService, transport);
+    this.inner = createPromiseClient(SyncService, transport);
     this.chain = chain;
   }
 
