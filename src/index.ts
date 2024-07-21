@@ -122,7 +122,7 @@ export class QueryClient<BlockT, PointT, UTxOT> {
     this.chain = chain;
   }
 
-  async readUtxosByOutputRef(refs: {txHash: Uint8Array, outputIndex: number}[]): Promise<UTxOT[]> {
+  async readUtxosByOutputRef(refs: { txHash: Uint8Array, outputIndex: number }[]): Promise<UTxOT[]> {
     const searchResponse = await this.inner.readUtxos({
       keys: refs.map((ref) => {
         return {
@@ -164,15 +164,16 @@ export class QueryClient<BlockT, PointT, UTxOT> {
       throw new Error("Exactly one of policyId or assetName must be provided.");
     }
 
+    const predicate = policyId
+      ? { policyId }
+      : { assetName: unit };
+
     const searchResponse = await this.inner.searchUtxos({
       predicate: {
         match: {
           utxoPattern: {
             value: {
-              asset: {
-                policyId,
-                assetName: unit
-              },
+              asset: predicate,
               address: {
                 exactAddress: address
               }
@@ -194,15 +195,16 @@ export class QueryClient<BlockT, PointT, UTxOT> {
       throw new Error("Exactly one of policyId or assetName must be provided.");
     }
 
+    const predicate = policyId
+      ? { policyId }
+      : { assetName: unit };
+
     const searchResponse = await this.inner.searchUtxos({
       predicate: {
         match: {
           utxoPattern: {
             value: {
-              asset: {
-                policyId,
-                assetName: unit
-              }
+              asset: predicate
             },
             case: "cardano"
           }
