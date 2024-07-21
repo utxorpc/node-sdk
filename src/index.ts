@@ -122,7 +122,7 @@ export class QueryClient<BlockT, PointT, UTxOT> {
     this.chain = chain;
   }
 
-  async getUtxoByOutputRef(refs: {txHash: Uint8Array, outputIndex: number}[]): Promise<UTxOT[] | null> {
+  async readUtxosByOutputRef(refs: {txHash: Uint8Array, outputIndex: number}[]): Promise<UTxOT[]> {
     const searchResponse = await this.inner.readUtxos({
       keys: refs.map((ref) => {
         return {
@@ -137,7 +137,7 @@ export class QueryClient<BlockT, PointT, UTxOT> {
     }).filter((item) => item != null) as UTxOT[];
   }
 
-  async getUtxosByAddress(address: Uint8Array): Promise<UTxOT[]> {
+  async searchUtxosByAddress(address: Uint8Array): Promise<UTxOT[]> {
     const searchResponse = await this.inner.searchUtxos({
       predicate: {
         match: {
@@ -158,7 +158,12 @@ export class QueryClient<BlockT, PointT, UTxOT> {
     }).filter((item) => item != null) as UTxOT[];
   }
 
-  async getUtxosByAddressAsset(address: Uint8Array, policyId: Uint8Array, assetName: Uint8Array): Promise<UTxOT[]> {
+  async searchUtxosByAddressAsset(address: Uint8Array, policyId?: Uint8Array, unit?: Uint8Array): Promise<UTxOT[]> {
+
+    if ((policyId && unit) || (!policyId && !unit)) {
+      throw new Error("Exactly one of policyId or assetName must be provided.");
+    }
+
     const searchResponse = await this.inner.searchUtxos({
       predicate: {
         match: {
@@ -166,7 +171,7 @@ export class QueryClient<BlockT, PointT, UTxOT> {
             value: {
               asset: {
                 policyId,
-                // assetName - commented because currently dolos returns conflicting criteria when both assetName and policyId are set
+                assetName: unit
               },
               address: {
                 exactAddress: address
@@ -183,7 +188,12 @@ export class QueryClient<BlockT, PointT, UTxOT> {
     }).filter((item) => item != null) as UTxOT[];
   }
 
-  async getUtxosByNft(policyId: Uint8Array, assetName: Uint8Array): Promise<UTxOT[]> {
+  async searchUtxosByAsset(policyId?: Uint8Array, unit?: Uint8Array): Promise<UTxOT[]> {
+
+    if ((policyId && unit) || (!policyId && !unit)) {
+      throw new Error("Exactly one of policyId or assetName must be provided.");
+    }
+
     const searchResponse = await this.inner.searchUtxos({
       predicate: {
         match: {
@@ -191,7 +201,7 @@ export class QueryClient<BlockT, PointT, UTxOT> {
             value: {
               asset: {
                 policyId,
-                // assetName - commented because currently dolos returns conflicting criteria when both assetName and policyId are set
+                assetName: unit
               }
             },
             case: "cardano"
