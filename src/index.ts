@@ -9,11 +9,14 @@ import * as Cardano from "@utxorpc/spec/lib/utxorpc/v1alpha/cardano/cardano_pb.j
 
 import { SyncService } from "@utxorpc/spec/lib/utxorpc/v1alpha/sync/sync_connect.js";
 
+import { QueryService } from "@utxorpc/spec/lib/utxorpc/v1alpha/query/query_connect.js";
+
 import {
   AnyChainBlock,
   BlockRef,
   FollowTipRequest,
 } from "@utxorpc/spec/lib/utxorpc/v1alpha/sync/sync_pb.js";
+import { AnyUtxoData, SearchUtxosResponse } from "@utxorpc/spec/lib/utxorpc/v1alpha/query/query_pb.js";
 
 function metadataInterceptor(options?: ClientBuilderOptions): Interceptor {
   return (next) => async (req) => {
@@ -27,10 +30,11 @@ function metadataInterceptor(options?: ClientBuilderOptions): Interceptor {
   };
 }
 
-interface Chain<BlockT, PointT> {
+interface Chain<BlockT, PointT, UTxOT> {
   anyChainToBlock(msg: AnyChainBlock): BlockT | null;
   pointToBlockRef(p: PointT): BlockRef;
   blockRefToPoint(r: BlockRef): PointT;
+  anyUtxoToUnspentOutput(u: AnyUtxoData): UTxOT | null;
 }
 
 export type TipEvent<BlockT, PointT> =
@@ -43,13 +47,14 @@ export type ClientBuilderOptions = {
   headers?: Record<string, string>;
 };
 
-export class SyncClient<BlockT, PointT> {
+export class SyncClient<BlockT, PointT, UTxOT> {
   inner: PromiseClient<typeof SyncService>;
-  chain: Chain<BlockT, PointT>;
+  queryClient: PromiseClient<typeof QueryService>;
+  chain: Chain<BlockT, PointT, UTxOT>;
 
-  constructor(options: ClientBuilderOptions, chain: Chain<BlockT, PointT>) {
+  constructor(options: ClientBuilderOptions, chain: Chain<BlockT, PointT, UTxOT>) {
     let headerInterceptor = metadataInterceptor(options);
-    
+
     const transport = createGrpcTransport({
       httpVersion: "2",
       baseUrl: options.uri,
@@ -57,6 +62,7 @@ export class SyncClient<BlockT, PointT> {
     });
 
     this.inner = createPromiseClient(SyncService, transport);
+    this.queryClient = createPromiseClient(QueryService, transport);
     this.chain = chain;
   }
 
@@ -91,13 +97,132 @@ export class SyncClient<BlockT, PointT> {
       }
     }
   }
+
+  async fetchBlock(p: PointT): Promise<BlockT> {
+    const req = this.chain.pointToBlockRef(p);
+    const res = await this.inner.fetchBlock({ ref: [req] });
+    return this.chain.anyChainToBlock(res.block[0])!;
+  }
+}
+
+export class QueryClient<BlockT, PointT, UTxOT> {
+  inner: PromiseClient<typeof QueryService>;
+  chain: Chain<BlockT, PointT, UTxOT>;
+
+  constructor(options: ClientBuilderOptions, chain: Chain<BlockT, PointT, UTxOT>) {
+    let headerInterceptor = metadataInterceptor(options);
+
+    const transport = createGrpcTransport({
+      httpVersion: "2",
+      baseUrl: options.uri,
+      interceptors: [headerInterceptor],
+    });
+
+    this.inner = createPromiseClient(QueryService, transport);
+    this.chain = chain;
+  }
+
+  async readUtxosByOutputRef(refs: { txHash: Uint8Array, outputIndex: number }[]): Promise<UTxOT[]> {
+    const searchResponse = await this.inner.readUtxos({
+      keys: refs.map((ref) => {
+        return {
+          hash: ref.txHash,
+          index: ref.outputIndex
+        };
+      })
+    });
+
+    return searchResponse.items.map((item) => {
+      return this.chain.anyUtxoToUnspentOutput(item);
+    }).filter((item) => item != null) as UTxOT[];
+  }
+
+  async searchUtxosByAddress(address: Uint8Array): Promise<UTxOT[]> {
+    const searchResponse = await this.inner.searchUtxos({
+      predicate: {
+        match: {
+          utxoPattern: {
+            value: {
+              address: {
+                exactAddress: address
+              }
+            },
+            case: "cardano"
+          }
+        }
+      }
+    });
+
+    return searchResponse.items.map((item) => {
+      return this.chain.anyUtxoToUnspentOutput(item);
+    }).filter((item) => item != null) as UTxOT[];
+  }
+
+  async searchUtxosByAddressAsset(address: Uint8Array, policyId?: Uint8Array, unit?: Uint8Array): Promise<UTxOT[]> {
+
+    if ((policyId && unit) || (!policyId && !unit)) {
+      throw new Error("Exactly one of policyId or assetName must be provided.");
+    }
+
+    const predicate = policyId
+      ? { policyId }
+      : { assetName: unit };
+
+    const searchResponse = await this.inner.searchUtxos({
+      predicate: {
+        match: {
+          utxoPattern: {
+            value: {
+              asset: predicate,
+              address: {
+                exactAddress: address
+              }
+            },
+            case: "cardano"
+          }
+        }
+      }
+    });
+
+    return searchResponse.items.map((item) => {
+      return this.chain.anyUtxoToUnspentOutput(item);
+    }).filter((item) => item != null) as UTxOT[];
+  }
+
+  async searchUtxosByAsset(policyId?: Uint8Array, unit?: Uint8Array): Promise<UTxOT[]> {
+
+    if ((policyId && unit) || (!policyId && !unit)) {
+      throw new Error("Exactly one of policyId or assetName must be provided.");
+    }
+
+    const predicate = policyId
+      ? { policyId }
+      : { assetName: unit };
+
+    const searchResponse = await this.inner.searchUtxos({
+      predicate: {
+        match: {
+          utxoPattern: {
+            value: {
+              asset: predicate
+            },
+            case: "cardano"
+          }
+        }
+      }
+    });
+
+    return searchResponse.items.map((item) => {
+      return this.chain.anyUtxoToUnspentOutput(item);
+    }).filter((item) => item != null) as UTxOT[];
+  }
 }
 
 export type CardanoBlock = Cardano.Block;
-
 export type CardanoPoint = { slot: number | string; hash: string };
+export type CardanoUnspentOutput = Cardano.TxInput;
 
-const CARDANO: Chain<CardanoBlock, CardanoPoint> = {
+const CARDANO: Chain<CardanoBlock, CardanoPoint, CardanoUnspentOutput> = {
   anyChainToBlock(msg) {
     return msg.chain.case == "cardano" ? msg.chain.value : null;
   },
@@ -113,9 +238,22 @@ const CARDANO: Chain<CardanoBlock, CardanoPoint> = {
       hash: Buffer.from(r.hash).toString("hex"),
     };
   },
+  anyUtxoToUnspentOutput(u) {
+    return u.parsedState.case == "cardano" ? {
+      txHash: u.txoRef?.hash,
+      outputIndex: u.txoRef?.index,
+      asOutput: u.parsedState.value
+    } as CardanoUnspentOutput : null;
+  }
 };
 
-export class CardanoSyncClient extends SyncClient<CardanoBlock, CardanoPoint> {
+export class CardanoSyncClient extends SyncClient<CardanoBlock, CardanoPoint, CardanoUnspentOutput> {
+  constructor(options: ClientBuilderOptions) {
+    super(options, CARDANO);
+  }
+}
+
+export class CardanoQueryClient extends QueryClient<CardanoBlock, CardanoPoint, CardanoUnspentOutput> {
   constructor(options: ClientBuilderOptions) {
     super(options, CARDANO);
   }
