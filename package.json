@@ -1,6 +1,6 @@
 {
   "name": "@utxorpc/sdk",
-  "version": "0.7.1",
+  "version": "0.2.0",
   "description": "A client library to interact with UTxO RPC compliant endpoints",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
@@ -11,7 +11,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/utxorpc/js-sdk.git"
+    "url": "git+https://github.com/utxorpc/node-sdk.git"
   },
   "keywords": [
     "utxorpc",
@@ -20,9 +20,9 @@
   "author": "scarmuega",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/utxorpc/web-sdk/issues"
+    "url": "https://github.com/utxorpc/node-sdk/issues"
   },
-  "homepage": "https://github.com/utxorpc/web-sdk#readme",
+  "homepage": "https://github.com/utxorpc/node-sdk#readme",
   "devDependencies": {
     "tsx": "^4.16.2",
     "typescript": "5.1.3"
