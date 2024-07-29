@@ -16,7 +16,7 @@ import {
   BlockRef,
   FollowTipRequest,
 } from "@utxorpc/spec/lib/utxorpc/v1alpha/sync/sync_pb.js";
-import { AnyUtxoData, SearchUtxosResponse } from "@utxorpc/spec/lib/utxorpc/v1alpha/query/query_pb.js";
+import { AnyChainParams, AnyUtxoData } from "@utxorpc/spec/lib/utxorpc/v1alpha/query/query_pb.js";
 
 function metadataInterceptor(options?: ClientBuilderOptions): Interceptor {
   return (next) => async (req) => {
@@ -30,11 +30,12 @@ function metadataInterceptor(options?: ClientBuilderOptions): Interceptor {
   };
 }
 
-interface Chain<BlockT, PointT, UTxOT> {
+interface Chain<BlockT, PointT, UTxOT, PParamT> {
   anyChainToBlock(msg: AnyChainBlock): BlockT | null;
   pointToBlockRef(p: PointT): BlockRef;
   blockRefToPoint(r: BlockRef): PointT;
   anyUtxoToUnspentOutput(u: AnyUtxoData): UTxOT | null;
+  anyPParamsToProtocolParameters(p: AnyChainParams): PParamT | null;
 }
 
 export type TipEvent<BlockT, PointT> =
@@ -47,12 +48,12 @@ export type ClientBuilderOptions = {
   headers?: Record<string, string>;
 };
 
-export class SyncClient<BlockT, PointT, UTxOT> {
+export class SyncClient<BlockT, PointT, UTxOT, PParamsT> {
   inner: PromiseClient<typeof SyncService>;
   queryClient: PromiseClient<typeof QueryService>;
-  chain: Chain<BlockT, PointT, UTxOT>;
+  chain: Chain<BlockT, PointT, UTxOT, PParamsT>;
 
-  constructor(options: ClientBuilderOptions, chain: Chain<BlockT, PointT, UTxOT>) {
+  constructor(options: ClientBuilderOptions, chain: Chain<BlockT, PointT, UTxOT, PParamsT>) {
     let headerInterceptor = metadataInterceptor(options);
 
     const transport = createGrpcTransport({
@@ -105,11 +106,11 @@ export class SyncClient<BlockT, PointT, UTxOT> {
   }
 }
 
-export class QueryClient<BlockT, PointT, UTxOT> {
+export class QueryClient<BlockT, PointT, UTxOT, PParamsT> {
   inner: PromiseClient<typeof QueryService>;
-  chain: Chain<BlockT, PointT, UTxOT>;
+  chain: Chain<BlockT, PointT, UTxOT, PParamsT>;
 
-  constructor(options: ClientBuilderOptions, chain: Chain<BlockT, PointT, UTxOT>) {
+  constructor(options: ClientBuilderOptions, chain: Chain<BlockT, PointT, UTxOT, PParamsT>) {
     let headerInterceptor = metadataInterceptor(options);
 
     const transport = createGrpcTransport({
@@ -120,6 +121,16 @@ export class QueryClient<BlockT, PointT, UTxOT> {
 
     this.inner = createPromiseClient(QueryService, transport);
     this.chain = chain;
+  }
+
+  async readParams() {
+    const res = await this.inner.readParams({});
+    if (res.values != null) {
+      return this.chain.anyPParamsToProtocolParameters(res.values);
+    }
+    else {
+      return null;
+    }
   }
 
   async readUtxosByOutputRef(refs: { txHash: Uint8Array, outputIndex: number }[]): Promise<UTxOT[]> {
@@ -221,8 +232,9 @@ export class QueryClient<BlockT, PointT, UTxOT> {
 export type CardanoBlock = Cardano.Block;
 export type CardanoPoint = { slot: number | string; hash: string };
 export type CardanoUnspentOutput = Cardano.TxInput;
+export type CardanoProtocolParameters = Cardano.PParams;
 
-const CARDANO: Chain<CardanoBlock, CardanoPoint, CardanoUnspentOutput> = {
+const CARDANO: Chain<CardanoBlock, CardanoPoint, CardanoUnspentOutput, CardanoProtocolParameters> = {
   anyChainToBlock(msg) {
     return msg.chain.case == "cardano" ? msg.chain.value : null;
   },
@@ -244,16 +256,19 @@ const CARDANO: Chain<CardanoBlock, CardanoPoint, CardanoUnspentOutput> = {
       outputIndex: u.txoRef?.index,
       asOutput: u.parsedState.value
     } as CardanoUnspentOutput : null;
+  },
+  anyPParamsToProtocolParameters(p) {
+    return p?.params.value ?? null;
   }
 };
 
-export class CardanoSyncClient extends SyncClient<CardanoBlock, CardanoPoint, CardanoUnspentOutput> {
+export class CardanoSyncClient extends SyncClient<CardanoBlock, CardanoPoint, CardanoUnspentOutput, CardanoProtocolParameters> {
   constructor(options: ClientBuilderOptions) {
     super(options, CARDANO);
   }
 }
 
-export class CardanoQueryClient extends QueryClient<CardanoBlock, CardanoPoint, CardanoUnspentOutput> {
+export class CardanoQueryClient extends QueryClient<CardanoBlock, CardanoPoint, CardanoUnspentOutput, CardanoProtocolParameters> {
   constructor(options: ClientBuilderOptions) {
     super(options, CARDANO);
   }
