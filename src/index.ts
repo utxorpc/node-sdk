@@ -50,7 +50,6 @@ export type ClientBuilderOptions = {
 
 export class SyncClient<BlockT, PointT, UTxOT, PParamsT> {
   inner: PromiseClient<typeof SyncService>;
-  queryClient: PromiseClient<typeof QueryService>;
   chain: Chain<BlockT, PointT, UTxOT, PParamsT>;
 
   constructor(options: ClientBuilderOptions, chain: Chain<BlockT, PointT, UTxOT, PParamsT>) {
@@ -63,7 +62,6 @@ export class SyncClient<BlockT, PointT, UTxOT, PParamsT> {
     });
 
     this.inner = createPromiseClient(SyncService, transport);
-    this.queryClient = createPromiseClient(QueryService, transport);
     this.chain = chain;
   }
 
