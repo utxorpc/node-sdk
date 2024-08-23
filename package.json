@@ -1,6 +1,6 @@
 {
   "name": "@utxorpc/sdk",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "A client library to interact with UTxO RPC compliant endpoints",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
