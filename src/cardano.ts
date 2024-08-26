@@ -9,10 +9,12 @@ import { createGrpcTransport } from "@connectrpc/connect-node";
 import { PartialMessage } from "@bufbuild/protobuf";
 
 import * as query from "@utxorpc/spec/lib/utxorpc/v1alpha/query/query_pb.js";
+import * as submit from "@utxorpc/spec/lib/utxorpc/v1alpha/submit/submit_pb.js";
 import * as cardano from "@utxorpc/spec/lib/utxorpc/v1alpha/cardano/cardano_pb.js";
 
 import { SyncService } from "@utxorpc/spec/lib/utxorpc/v1alpha/sync/sync_connect.js";
 import { QueryService } from "@utxorpc/spec/lib/utxorpc/v1alpha/query/query_connect.js";
+import { SubmitService } from "@utxorpc/spec/lib/utxorpc/v1alpha/submit/submit_connect.js";
 
 import {
   AnyChainBlock,
@@ -30,6 +32,8 @@ import {
 export type ChainPoint = { slot: number | string; hash: string };
 export type Utxo = GenericUtxo<query.TxoRef, cardano.TxOutput>;
 export type TipEvent = GenericTipEvent<cardano.Block, ChainPoint>;
+export type TxHash = Uint8Array;
+export type TxCbor = Uint8Array;
 
 function anyChainToBlock(msg) {
   return msg.chain.case == "cardano" ? msg.chain.value : null;
@@ -185,5 +189,42 @@ export class QueryClient {
     return this.searchUtxosByMatch({
       asset: policyId ? { policyId } : { assetName: name },
     });
+  }
+
+  async searchUtxosByAddressWithAsset(
+    address: Uint8Array,
+    policyId?: Uint8Array,
+    name?: Uint8Array
+  ): Promise<Utxo[]> {
+    return this.searchUtxosByMatch({
+      address: {
+        exactAddress: address,
+      },
+      asset: policyId ? { policyId } : { assetName: name },
+    });
+  }
+}
+
+export class SubmitClient {
+  inner: PromiseClient<typeof SubmitService>;
+
+  constructor(options: ClientBuilderOptions) {
+    let headerInterceptor = metadataInterceptor(options);
+
+    const transport = createGrpcTransport({
+      httpVersion: "2",
+      baseUrl: options.uri,
+      interceptors: [headerInterceptor],
+    });
+
+    this.inner = createPromiseClient(SubmitService, transport);
+  }
+
+  async submitTx(tx: TxCbor): Promise<TxHash> {
+    const res = await this.inner.submitTx({
+      tx: [tx].map((cbor) => ({ type: { case: "raw", value: cbor } })),
+    });
+
+    return res.ref[0];
   }
 }
