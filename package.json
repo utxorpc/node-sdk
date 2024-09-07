@@ -4,9 +4,9 @@
   "description": "A client library to interact with UTxO RPC compliant endpoints",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
-  "type": "module",
+  "module": "./lib/index.mjs",
   "scripts": {
-    "build": "tsc",
+    "build": "tsup src/index.ts --format esm,cjs --dts --out-dir lib",
     "example": "tsx ./examples/follow-tip.ts"
   },
   "repository": {
@@ -24,6 +24,7 @@
   },
   "homepage": "https://github.com/utxorpc/node-sdk#readme",
   "devDependencies": {
+    "tsup": "^8.2.4",
     "tsx": "^4.16.2",
     "typescript": "5.1.3"
   },
