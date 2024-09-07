@@ -1,11 +1,7 @@
-import { BlockRef } from "@utxorpc/spec/lib/utxorpc/v1alpha/sync/sync_pb";
 import { CardanoSyncClient } from "../";
 
 let client = new CardanoSyncClient({
-  uri: "https://preview.utxorpc-v0.demeter.run/",
-  headers: {
-    "dmtr-api-key": "dmtr_utxorpc1rutw90zm5ucx4lg9tj56nymnq5j98zlf",
-  },
+  uri: "http://localhost:50051",
 });
 
 let next_token: any = {

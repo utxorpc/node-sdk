@@ -8,19 +8,15 @@ import { createGrpcTransport } from "@connectrpc/connect-node";
 
 import { PartialMessage } from "@bufbuild/protobuf";
 
-import * as query from "@utxorpc/spec/lib/utxorpc/v1alpha/query/query_pb.js";
-import * as submit from "@utxorpc/spec/lib/utxorpc/v1alpha/submit/submit_pb.js";
-import * as cardano from "@utxorpc/spec/lib/utxorpc/v1alpha/cardano/cardano_pb.js";
-
-import { SyncService } from "@utxorpc/spec/lib/utxorpc/v1alpha/sync/sync_connect.js";
-import { QueryService } from "@utxorpc/spec/lib/utxorpc/v1alpha/query/query_connect.js";
-import { SubmitService } from "@utxorpc/spec/lib/utxorpc/v1alpha/submit/submit_connect.js";
-
 import {
-  AnyChainBlock,
-  BlockRef,
-  FollowTipRequest,
-} from "@utxorpc/spec/lib/utxorpc/v1alpha/sync/sync_pb.js";
+  sync,
+  syncConnect,
+  query,
+  queryConnect,
+  submit,
+  submitConnect,
+  cardano,
+} from "@utxorpc/spec";
 
 import {
   ClientBuilderOptions,
@@ -40,7 +36,7 @@ function anyChainToBlock(msg) {
 }
 
 function pointToBlockRef(p: ChainPoint) {
-  return new BlockRef({
+  return new sync.BlockRef({
     index: BigInt(p.slot),
     hash: new Uint8Array(Buffer.from(p.hash, "hex")),
   });
@@ -76,7 +72,7 @@ function anyParamsToChain(p: query.AnyChainParams): cardano.PParams {
 }
 
 export class SyncClient {
-  inner: PromiseClient<typeof SyncService>;
+  inner: PromiseClient<typeof syncConnect.SyncService>;
 
   constructor(options: ClientBuilderOptions) {
     let headerInterceptor = metadataInterceptor(options);
@@ -87,11 +83,11 @@ export class SyncClient {
       interceptors: [headerInterceptor],
     });
 
-    this.inner = createPromiseClient(SyncService, transport);
+    this.inner = createPromiseClient(syncConnect.SyncService, transport);
   }
 
   async *followTip(intersect?: ChainPoint[]): AsyncIterable<TipEvent> {
-    const req = new FollowTipRequest({
+    const req = new sync.FollowTipRequest({
       intersect: intersect?.map((p) => pointToBlockRef(p)),
     });
 
@@ -128,7 +124,7 @@ export class SyncClient {
 }
 
 export class QueryClient {
-  inner: PromiseClient<typeof QueryService>;
+  inner: PromiseClient<typeof queryConnect.QueryService>;
 
   constructor(options: ClientBuilderOptions) {
     let headerInterceptor = metadataInterceptor(options);
@@ -139,7 +135,7 @@ export class QueryClient {
       interceptors: [headerInterceptor],
     });
 
-    this.inner = createPromiseClient(QueryService, transport);
+    this.inner = createPromiseClient(queryConnect.QueryService, transport);
   }
 
   async readParams(): Promise<cardano.PParams> {
@@ -206,7 +202,7 @@ export class QueryClient {
 }
 
 export class SubmitClient {
-  inner: PromiseClient<typeof SubmitService>;
+  inner: PromiseClient<typeof submitConnect.SubmitService>;
 
   constructor(options: ClientBuilderOptions) {
     let headerInterceptor = metadataInterceptor(options);
@@ -217,7 +213,7 @@ export class SubmitClient {
       interceptors: [headerInterceptor],
     });
 
-    this.inner = createPromiseClient(SubmitService, transport);
+    this.inner = createPromiseClient(submitConnect.SubmitService, transport);
   }
 
   async submitTx(tx: TxCbor): Promise<TxHash> {
@@ -226,5 +222,15 @@ export class SubmitClient {
     });
 
     return res.ref[0];
+  }
+
+  async *waitForTx(txHash: TxHash): AsyncIterable<submit.Stage> {
+    const updates = this.inner.waitForTx({
+      ref: [txHash],
+    });
+
+    for await (const change of updates) {
+      yield change.stage;
+    }
   }
 }

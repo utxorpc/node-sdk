@@ -33,7 +33,7 @@ async function test() {
   ]);
 
   for await (const event of tip) {
-    console.log((event as any).block.header.slot);
+    console.log(event);
   }
 }
 test().catch(console.error);
