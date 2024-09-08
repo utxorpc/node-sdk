@@ -9,7 +9,6 @@
     "build": "npm run build:node && npm run build:browser",
     "build:node": "tsup src/index.ts --env.NODE_ENV=node",
     "build:browser": "tsup src/index.ts --env.NODE_ENV=browser",
-    "example": "tsx ./examples/follow-tip.ts",
     "prepublish": "npm run build"
   },
   "repository": {
