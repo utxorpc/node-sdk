@@ -1,13 +1,16 @@
 {
   "name": "@utxorpc/sdk",
-  "version": "0.5.0",
+  "version": "0.6.1",
   "description": "A client library to interact with UTxO RPC compliant endpoints",
-  "main": "./lib/index.js",
-  "types": "./lib/index.d.ts",
-  "module": "./lib/index.mjs",
+  "main": "./lib/node/index.js",
+  "module": "./lib/node/index.mjs",
+  "browser": "./lib/browser/index.js",
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts --out-dir lib",
-    "example": "tsx ./examples/follow-tip.ts"
+    "build": "npm run build:node && npm run build:browser",
+    "build:node": "tsup src/index.ts --env.NODE_ENV=node",
+    "build:browser": "tsup src/index.ts --env.NODE_ENV=browser",
+    "example": "tsx ./examples/follow-tip.ts",
+    "prepublish": "npm run build"
   },
   "repository": {
     "type": "git",
@@ -25,13 +28,37 @@
   "homepage": "https://github.com/utxorpc/node-sdk#readme",
   "devDependencies": {
     "tsup": "^8.2.4",
-    "tsx": "^4.16.2",
-    "typescript": "5.1.3"
+    "tsx": "4.19.0",
+    "typescript": "5.5.4"
   },
   "dependencies": {
     "@connectrpc/connect": "1.4",
     "@connectrpc/connect-node": "1.4",
+    "@connectrpc/connect-web": "1.4",
     "@types/node": "20.14.10",
-    "@utxorpc/spec": "0.10.0"
-  }
+    "@utxorpc/spec": "0.10.0",
+    "buffer": "^6.0.3"
+  },
+  "exports": {
+    ".": {
+      "node": {
+        "types": "./lib/node/index.d.ts",
+        "import": "./lib/node/index.mjs",
+        "require": "./lib/node/index.js"
+      },
+      "browser": {
+        "types": "./lib/browser/index.d.ts",
+        "import": "./lib/browser/index.mjs",
+        "require": "./lib/browser/index.js"
+      },
+      "default": "./lib/node/index.js"
+    }
+  },
+  "imports": {
+    "@sdk/*": "./src/*"
+  },
+  "files": [
+    "lib",
+    "src"
+  ]
 }
