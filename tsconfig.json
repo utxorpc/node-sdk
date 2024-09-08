@@ -1,14 +1,21 @@
 {
   "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@sdk/*": ["src/*"],
+      "@sdk/grpcTransport": ["src/grpcTransport.node.ts", "src/grpcTransport.web.ts"]
+    },
     "target": "ES2018",
-    "module": "Node16",
+    "module": "ES2022",
     "declaration": true,
     "outDir": "./lib",
     "strict": true,
     "esModuleInterop": true,
-    "moduleResolution": "Node16",
-    "noImplicitAny": false
+    "moduleResolution": "node",
+    "noImplicitAny": false,
+    "allowImportingTsExtensions": true,
+    "noEmit": true
   },
   "include": ["src"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "examples"]
 }

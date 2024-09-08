@@ -1,4 +1,4 @@
-import { CardanoSyncClient, CardanoQueryClient } from "../src/index.js";
+import { CardanoSyncClient, CardanoQueryClient } from "@saibdev/utxorpc-sdk";
 
 async function test() {
   let syncClient = new CardanoSyncClient({

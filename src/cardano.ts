@@ -1,12 +1,13 @@
 import {
-  Interceptor,
   PromiseClient,
   createPromiseClient,
 } from "@connectrpc/connect";
 
-import { createGrpcTransport } from "@connectrpc/connect-node";
+import { createGrpcTransport } from '@sdk/grpcTransport';
 
 import { PartialMessage } from "@bufbuild/protobuf";
+
+import { Buffer } from "buffer";
 
 import {
   sync,

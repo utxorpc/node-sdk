@@ -1,4 +1,4 @@
-import { CardanoSyncClient } from "../";
+import { CardanoSyncClient } from "../../lib/node";
 
 let client = new CardanoSyncClient({
   uri: "http://localhost:50051",

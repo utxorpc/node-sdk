@@ -1,9 +1,6 @@
 import {
   Interceptor,
-  PromiseClient,
-  createPromiseClient,
 } from "@connectrpc/connect";
-import { createGrpcTransport } from "@connectrpc/connect-node";
 
 export function metadataInterceptor(
   options?: ClientBuilderOptions
