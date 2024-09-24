@@ -179,6 +179,22 @@ export class QueryClient {
     });
   }
 
+  async searchUtxosByPaymentPart(address: Uint8Array): Promise<Utxo[]> {
+    return this.searchUtxosByMatch({
+      address: {
+        paymentPart: address,
+      },
+    });
+  }
+
+  async searchUtxosByDelegationPart(address: Uint8Array): Promise<Utxo[]> {
+    return this.searchUtxosByMatch({
+      address: {
+        delegationPart: address,
+      },
+    });
+  }
+
   async searchUtxosByAsset(
     policyId?: Uint8Array,
     name?: Uint8Array
