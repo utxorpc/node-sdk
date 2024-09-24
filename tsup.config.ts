@@ -41,8 +41,7 @@ export default defineConfig((options) => {
                 options.mainFields = ['module', 'main']
             }
         },
-        noExternal: ['@connectrpc/connect', '@connectrpc/connect-web', '@connectrpc/connect-node'],
-        treeshake: true,
+        noExternal: isBrowser ? ['@connectrpc/connect', '@connectrpc/connect-web', '@connectrpc/connect-node'] : [],
         sourcemap: true,
         tsconfig: path.resolve(rootDir, 'tsconfig.json'),
     }
