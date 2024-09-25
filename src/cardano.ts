@@ -179,18 +179,18 @@ export class QueryClient {
     });
   }
 
-  async searchUtxosByPaymentPart(address: Uint8Array): Promise<Utxo[]> {
+  async searchUtxosByPaymentPart(paymentPart: Uint8Array): Promise<Utxo[]> {
     return this.searchUtxosByMatch({
       address: {
-        paymentPart: address,
+        paymentPart: paymentPart,
       },
     });
   }
 
-  async searchUtxosByDelegationPart(address: Uint8Array): Promise<Utxo[]> {
+  async searchUtxosByDelegationPart(delegationPart: Uint8Array): Promise<Utxo[]> {
     return this.searchUtxosByMatch({
       address: {
-        delegationPart: address,
+        delegationPart: delegationPart,
       },
     });
   }
