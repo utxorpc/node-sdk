@@ -216,6 +216,32 @@ export class QueryClient {
       asset: policyId ? { policyId } : { assetName: name },
     });
   }
+
+  async searchUtxosByPaymentPartWithAsset(
+    paymentPart: Uint8Array,
+    policyId?: Uint8Array,
+    name?: Uint8Array
+  ): Promise<Utxo[]> {
+    return this.searchUtxosByMatch({
+      address: {
+        paymentPart: paymentPart,
+      },
+      asset: policyId ? { policyId } : { assetName: name },
+    });
+  }
+
+  async searchUtxosByDelegationPartWithAsset(
+    delegationPart: Uint8Array,
+    policyId?: Uint8Array,
+    name?: Uint8Array
+  ): Promise<Utxo[]> {
+    return this.searchUtxosByMatch({
+      address: {
+        delegationPart: delegationPart,
+      },
+      asset: policyId ? { policyId } : { assetName: name },
+    });
+  }
 }
 
 export class SubmitClient {
