@@ -1,9 +1,6 @@
-import {
-  PromiseClient,
-  createPromiseClient,
-} from "@connectrpc/connect";
+import { PromiseClient, createPromiseClient } from "@connectrpc/connect";
 
-import { createGrpcTransport } from '@sdk/grpcTransport';
+import { createGrpcTransport } from "@sdk/grpcTransport";
 
 import { PartialMessage } from "@bufbuild/protobuf";
 
@@ -16,6 +13,8 @@ import {
   queryConnect,
   submit,
   submitConnect,
+  watchConnect,
+  watch,
   cardano,
 } from "@utxorpc/spec";
 
@@ -122,6 +121,26 @@ export class SyncClient {
     const res = await this.inner.fetchBlock({ ref: [req] });
     return anyChainToBlock(res.block[0])!;
   }
+
+  async fetchHistory(p: ChainPoint): Promise<cardano.Block> {
+    const req = new sync.DumpHistoryRequest({
+      startToken: new sync.BlockRef({
+        index: BigInt(p.slot),
+        hash: Buffer.from(p.hash, "hex"),
+      }),
+      maxItems: 1,
+    });
+
+    const res = await this.inner.dumpHistory(req);
+
+    if (res.block.length === 0) {
+      throw new Error("No block history found for the provided ChainPoint.");
+    }
+
+    const block = anyChainToBlock(res.block[0]);
+
+    return block!;
+  }
 }
 
 export class QueryClient {
@@ -187,7 +206,9 @@ export class QueryClient {
     });
   }
 
-  async searchUtxosByDelegationPart(delegationPart: Uint8Array): Promise<Utxo[]> {
+  async searchUtxosByDelegationPart(
+    delegationPart: Uint8Array
+  ): Promise<Utxo[]> {
     return this.searchUtxosByMatch({
       address: {
         delegationPart: delegationPart,
@@ -248,6 +269,91 @@ export class SubmitClient {
 
     for await (const change of updates) {
       yield change.stage;
+    }
+  }
+
+  async *watchMempool(
+    pattern: PartialMessage<cardano.TxPattern>
+  ): AsyncIterable<submit.WatchMempoolResponse> {
+    const updates = this.inner.watchMempool({
+      predicate: {
+        match: { chain: { value: pattern, case: "cardano" } },
+      },
+    });
+
+    for await (const response of updates) {
+      if (response.tx) {
+        yield response;
+      }
+    }
+  }
+
+  async *watchMempoolForAddress(
+    address: Uint8Array
+  ): AsyncIterable<submit.WatchMempoolResponse> {
+    const updates = this.inner.watchMempool({
+      predicate: {
+        match: {
+          chain: {
+            value: {
+              hasAddress: { exactAddress: address },
+            },
+            case: "cardano",
+          },
+        },
+      },
+    });
+
+    for await (const response of updates) {
+      if (response.tx) {
+        yield response;
+      }
+    }
+  }
+
+  // async readMempool(): Promise<submit.ReadMempoolResponse> {
+  //   const request = new submit.ReadMempoolRequest();
+  //   const response = await this.inner.readMempool(request);
+  //   return response;
+  // }
+
+  // async evalTx(tx: TxCbor): Promise<submit.AnyChainEval[]> {
+  //   const evalTxRequest = new submit.EvalTxRequest({
+  //     tx: [{ type: { case: "raw", value: tx } }],
+  //   });
+
+  //   const res = await this.inner.evalTx(evalTxRequest);
+
+  //   return res.report.map((report) => report);
+  // }
+}
+
+export class WatchClient {
+  inner: PromiseClient<typeof watchConnect.WatchService>;
+
+  constructor(options: ClientBuilderOptions) {
+    let headerInterceptor = metadataInterceptor(options);
+
+    const transport = createGrpcTransport({
+      httpVersion: "2",
+      baseUrl: options.uri,
+      interceptors: [headerInterceptor],
+    });
+
+    this.inner = createPromiseClient(watchConnect.WatchService, transport);
+  }
+
+  async *watchTx(
+    intersect?: ChainPoint[]
+  ): AsyncIterable<watch.WatchTxResponse> {
+    const request: watch.WatchTxRequest = new watch.WatchTxRequest({
+      intersect: intersect ? intersect.map(pointToBlockRef) : [],
+    });
+
+    const stream = this.inner.watchTx(request);
+
+    for await (const response of stream) {
+      yield response;
     }
   }
 }
