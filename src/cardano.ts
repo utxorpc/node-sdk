@@ -15,7 +15,7 @@ import {
   submitConnect,
   watchConnect,
   watch,
-  cardano,
+  cardano
 } from "@utxorpc/spec";
 
 import {
@@ -35,7 +35,7 @@ export type MempoolEvent = GenericTxInMempoolEvent<cardano.Tx>;
 export type TxHash = Uint8Array;
 export type TxCbor = Uint8Array;
 
-function toMempoolEvent(txInMempool): MempoolEvent {
+function toMempoolEvent(txInMempool: submit.TxInMempool): MempoolEvent {
   return {
     txoRef: txInMempool.ref,
     stage: txInMempool.stage,
@@ -46,17 +46,17 @@ function toMempoolEvent(txInMempool): MempoolEvent {
         : undefined,
   };
 }
-function toTxEvent(response): TxEvent {
+function toTxEvent(response: watch.WatchTxResponse): TxEvent {
   return {
     action: response.action.case as "apply" | "undo",
     Tx:
-      response.action.value.chain.case == "cardano"
+      response.action.value?.chain.case == "cardano"
         ? response.action.value?.chain.value
         : undefined,
   };
 }
 
-function anyChainToBlock(msg) {
+function anyChainToBlock(msg: sync.AnyChainBlock) {
   return msg.chain.case == "cardano" ? msg.chain.value : null;
 }
 
@@ -67,7 +67,7 @@ function pointToBlockRef(p: ChainPoint) {
   });
 }
 
-function blockRefToPoint(r) {
+function blockRefToPoint(r: sync.BlockRef) {
   return {
     slot: r.index.toString(),
     hash: Buffer.from(r.hash).toString("hex"),

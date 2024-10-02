@@ -1,5 +1,5 @@
 import { Interceptor } from "@connectrpc/connect";
-
+import { submit } from "@utxorpc/spec";
 export function metadataInterceptor(
   options?: ClientBuilderOptions
 ): Interceptor {
@@ -20,48 +20,15 @@ export type GenericTipEvent<Block, Point> =
   | { action: "reset"; point: Point };
 
 export type GenericTxEvent<Tx> =
-  | { action: "apply"; Tx: Tx }
-  | { action: "undo"; Tx: Tx };
+  | { action: "apply"; Tx: Tx | undefined }
+  | { action: "undo"; Tx: Tx | undefined };
 
-export enum GenericMempoolStage {
-  UNSPECIFIED = 0,
-  ACKNOWLEDGED = 1,
-  MEMPOOL = 2,
-  NETWORK = 3,
-  CONFIRMED = 4,
-}
-
-export type GenericTxInMempoolEvent<Tx> =
-  | {
-      stage: GenericMempoolStage.UNSPECIFIED;
-      txoRef: Uint8Array;
-      nativeBytes: Uint8Array;
-      Tx: Tx | undefined;
-    }
-  | {
-      stage: GenericMempoolStage.ACKNOWLEDGED;
-      txoRef: Uint8Array;
-      nativeBytes: Uint8Array;
-      Tx: Tx | undefined;
-    }
-  | {
-      stage: GenericMempoolStage.MEMPOOL;
-      txoRef: Uint8Array;
-      nativeBytes: Uint8Array;
-      Tx: Tx | undefined;
-    }
-  | {
-      stage: GenericMempoolStage.NETWORK;
-      txoRef: Uint8Array;
-      nativeBytes: Uint8Array;
-      Tx: Tx | undefined
-    }
-  | {
-      stage: GenericMempoolStage.CONFIRMED;
-      txoRef: Uint8Array;
-      nativeBytes: Uint8Array;
-      Tx: Tx | undefined;
-    };
+export type GenericTxInMempoolEvent<Tx> = {
+  stage: submit.Stage;
+  txoRef: Uint8Array;
+  nativeBytes: Uint8Array;
+  Tx: Tx | undefined;
+};
 
 export type GenericUtxo<Ref, Parsed> = {
   txoRef: Ref;
