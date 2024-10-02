@@ -20,52 +20,41 @@ import {
 
 import {
   ClientBuilderOptions,
-  metadataInterceptor,
   GenericTipEvent,
   GenericUtxo,
+  GenericTxEvent,
+  GenericTxInMempoolEvent,
+  metadataInterceptor,
 } from "./common.js";
 
 export type ChainPoint = { slot: number | string; hash: string };
 export type Utxo = GenericUtxo<query.TxoRef, cardano.TxOutput>;
 export type TipEvent = GenericTipEvent<cardano.Block, ChainPoint>;
+export type TxEvent = GenericTxEvent<cardano.Tx>;
+export type MempoolEvent = GenericTxInMempoolEvent<cardano.Tx>;
 export type TxHash = Uint8Array;
 export type TxCbor = Uint8Array;
-export type MempoolEvent = {
-  ref: Uint8Array;
-  stage: MempoolStage;
-  nativeBytes: Uint8Array;
-  parsedState?: cardano.Tx | undefined;
-};
-export enum MempoolStage {
-  ACKNOWLEDGED = "ACKNOWLEDGED",
-  MEMPOOL = "MEMPOOL",
-  NETWORK = "NETWORK",
-  CONFIRMED = "CONFIRMED",
-}
-
-export interface TxEvent {
-  ref: cardano.Tx | undefined; 
-  stage: "apply" | "undo";
-}
 
 function toMempoolEvent(txInMempool): MempoolEvent {
   return {
-    ref: txInMempool.ref,
-    stage: txInMempool.stage as MempoolStage,
+    txoRef: txInMempool.ref,
+    stage: txInMempool.stage,
     nativeBytes: txInMempool.nativeBytes,
-    parsedState: txInMempool.parsedState && txInMempool.parsedState.case === "cardano"
-      ? txInMempool.parsedState.value
-      : undefined,
+    Tx:
+      txInMempool.parsedState.case == "cardano"
+        ? txInMempool.parsedState.value
+        : undefined,
   };
 }
-
 function toTxEvent(response): TxEvent {
   return {
-    ref: response.action.value?.chain.value,
-    stage: response.action.case as "apply" | "undo",
+    action: response.action.case as "apply" | "undo",
+    Tx:
+      response.action.value.chain.case == "cardano"
+        ? response.action.value?.chain.value
+        : undefined,
   };
 }
-
 
 function anyChainToBlock(msg) {
   return msg.chain.case == "cardano" ? msg.chain.value : null;
@@ -408,9 +397,7 @@ export class WatchClient {
     }
   }
 
-  async *watchTx(
-    intersect?: ChainPoint[]
-  ): AsyncIterable<TxEvent> {
+  async *watchTx(intersect?: ChainPoint[]): AsyncIterable<TxEvent> {
     const pattern = {};
     yield* this.watchTxByMatch(pattern, intersect);
   }
