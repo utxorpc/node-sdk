@@ -3,31 +3,19 @@ import { SyncClient, QueryClient, Utxo, SubmitClient, WatchClient, ChainPoint } 
 
 async function test() {
   let syncClient = new SyncClient({
-    uri: "https://preview.utxorpc-v0.demeter.run",
-    headers: {
-      "dmtr-api-key": "dmtr_utxorpc1vc0m93rynmltysttwm7ns9m3n5cklws6",
-    }
+    uri: "http://localhost:50051/"
   });
 
   let queryClient = new QueryClient({
-    uri: "https://preview.utxorpc-v0.demeter.run",
-    headers: {
-      "dmtr-api-key": "dmtr_utxorpc1vc0m93rynmltysttwm7ns9m3n5cklws6",
-    }
+    uri: "http://localhost:50051/"
   });
 
   let submitClient = new SubmitClient({
-    uri: "https://preview.utxorpc-v0.demeter.run",
-    headers: {
-      "dmtr-api-key": "dmtr_utxorpc1vc0m93rynmltysttwm7ns9m3n5cklws6",
-    }
+    uri: "http://localhost:50051/"
   });
 
   const watchClient = new WatchClient({
-    uri: "https://preview.utxorpc-v0.demeter.run",
-    headers: {
-      "dmtr-api-key": "dmtr_utxorpc1vc0m93rynmltysttwm7ns9m3n5cklws6",
-    }
+    uri: "http://localhost:50051/"
   });
 
   const chainPoint: ChainPoint = 
