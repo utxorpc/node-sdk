@@ -1,9 +1,6 @@
-import {
-  PromiseClient,
-  createPromiseClient,
-} from "@connectrpc/connect";
+import { PromiseClient, createPromiseClient } from "@connectrpc/connect";
 
-import { createGrpcTransport } from '@sdk/grpcTransport';
+import { createGrpcTransport } from "@sdk/grpcTransport";
 
 import { PartialMessage } from "@bufbuild/protobuf";
 
@@ -16,23 +13,50 @@ import {
   queryConnect,
   submit,
   submitConnect,
-  cardano,
+  watchConnect,
+  watch,
+  cardano
 } from "@utxorpc/spec";
 
 import {
   ClientBuilderOptions,
-  metadataInterceptor,
   GenericTipEvent,
   GenericUtxo,
+  GenericTxEvent,
+  GenericTxInMempoolEvent,
+  metadataInterceptor,
 } from "./common.js";
 
 export type ChainPoint = { slot: number | string; hash: string };
 export type Utxo = GenericUtxo<query.TxoRef, cardano.TxOutput>;
 export type TipEvent = GenericTipEvent<cardano.Block, ChainPoint>;
+export type TxEvent = GenericTxEvent<cardano.Tx>;
+export type MempoolEvent = GenericTxInMempoolEvent<cardano.Tx>;
 export type TxHash = Uint8Array;
 export type TxCbor = Uint8Array;
 
-function anyChainToBlock(msg) {
+function toMempoolEvent(txInMempool: submit.TxInMempool): MempoolEvent {
+  return {
+    txoRef: txInMempool.ref,
+    stage: txInMempool.stage,
+    nativeBytes: txInMempool.nativeBytes,
+    Tx:
+      txInMempool.parsedState.case == "cardano"
+        ? txInMempool.parsedState.value
+        : undefined,
+  };
+}
+function toTxEvent(response: watch.WatchTxResponse): TxEvent {
+  return {
+    action: response.action.case as "apply" | "undo",
+    Tx:
+      response.action.value?.chain.case == "cardano"
+        ? response.action.value?.chain.value
+        : undefined,
+  };
+}
+
+function anyChainToBlock(msg: sync.AnyChainBlock) {
   return msg.chain.case == "cardano" ? msg.chain.value : null;
 }
 
@@ -43,7 +67,7 @@ function pointToBlockRef(p: ChainPoint) {
   });
 }
 
-function blockRefToPoint(r) {
+function blockRefToPoint(r: sync.BlockRef) {
   return {
     slot: r.index.toString(),
     hash: Buffer.from(r.hash).toString("hex"),
@@ -122,6 +146,26 @@ export class SyncClient {
     const res = await this.inner.fetchBlock({ ref: [req] });
     return anyChainToBlock(res.block[0])!;
   }
+
+  async fetchHistory(p: ChainPoint, maxItems = 1): Promise<cardano.Block> {
+    const req = new sync.DumpHistoryRequest({
+      startToken: new sync.BlockRef({
+        index: BigInt(p.slot),
+        hash: Buffer.from(p.hash, "hex"),
+      }),
+      maxItems: maxItems,
+    });
+
+    const res = await this.inner.dumpHistory(req);
+
+    if (res.block.length === 0) {
+      throw new Error("No block history found for the provided ChainPoint.");
+    }
+
+    const block = anyChainToBlock(res.block[0]);
+
+    return block!;
+  }
 }
 
 export class QueryClient {
@@ -187,7 +231,9 @@ export class QueryClient {
     });
   }
 
-  async searchUtxosByDelegationPart(delegationPart: Uint8Array): Promise<Utxo[]> {
+  async searchUtxosByDelegationPart(
+    delegationPart: Uint8Array
+  ): Promise<Utxo[]> {
     return this.searchUtxosByMatch({
       address: {
         delegationPart: delegationPart,
@@ -275,5 +321,145 @@ export class SubmitClient {
     for await (const change of updates) {
       yield change.stage;
     }
+  }
+
+  async *watchMempoolByMatch(
+    pattern: PartialMessage<cardano.TxPattern>
+  ): AsyncIterable<MempoolEvent> {
+    const stream = this.inner.watchMempool({
+      predicate: {
+        match: { chain: { value: pattern, case: "cardano" } },
+      },
+    });
+
+    for await (const response of stream) {
+      if (response.tx) {
+        yield toMempoolEvent(response.tx);
+      }
+    }
+  }
+
+  async *watchMempool(): AsyncIterable<MempoolEvent> {
+    yield* this.watchMempoolByMatch({});
+  }
+
+  async *watchMempoolForAddress(
+    address: Uint8Array
+  ): AsyncIterable<MempoolEvent> {
+    yield* this.watchMempoolByMatch({
+      hasAddress: { exactAddress: address },
+    });
+  }
+
+  async *watchMempoolForPaymentPart(
+    paymentPart: Uint8Array
+  ): AsyncIterable<MempoolEvent> {
+    yield* this.watchMempoolByMatch({
+      hasAddress: { paymentPart: paymentPart },
+    });
+  }
+
+  async *watchMempoolForDelegationPart(
+    delegationPart: Uint8Array
+  ): AsyncIterable<MempoolEvent> {
+    yield* this.watchMempoolByMatch({
+      hasAddress: { delegationPart: delegationPart },
+    });
+  }
+
+  async *watchMempoolForAsset(
+    policyId?: Uint8Array,
+    assetName?: Uint8Array
+  ): AsyncIterable<MempoolEvent> {
+    yield* this.watchMempoolByMatch({
+      movesAsset: policyId ? { policyId } : { assetName },
+    });
+  }
+}
+
+export class WatchClient {
+  inner: PromiseClient<typeof watchConnect.WatchService>;
+
+  constructor(options: ClientBuilderOptions) {
+    let headerInterceptor = metadataInterceptor(options);
+
+    const transport = createGrpcTransport({
+      httpVersion: "2",
+      baseUrl: options.uri,
+      interceptors: [headerInterceptor],
+    });
+
+    this.inner = createPromiseClient(watchConnect.WatchService, transport);
+  }
+
+  async *watchTxByMatch(
+    pattern: PartialMessage<cardano.TxPattern>,
+    intersect?: ChainPoint[]
+  ): AsyncIterable<TxEvent> {
+    const request: watch.WatchTxRequest = new watch.WatchTxRequest({
+      intersect: intersect ? intersect.map(pointToBlockRef) : [],
+      predicate: {
+        match: {
+          chain: {
+            value: pattern,
+            case: "cardano",
+          },
+        },
+      },
+    });
+
+    const stream = this.inner.watchTx(request);
+
+    for await (const response of stream) {
+      switch (response.action.case) {
+        case "apply":
+          yield toTxEvent(response);
+          break;
+
+        case "undo":
+          yield toTxEvent(response);
+          break;
+      }
+    }
+  }
+
+  async *watchTx(intersect?: ChainPoint[]): AsyncIterable<TxEvent> {
+    const pattern = {};
+    yield* this.watchTxByMatch(pattern, intersect);
+  }
+
+  async *watchTxForAddress(
+    address: Uint8Array,
+    intersect?: ChainPoint[]
+  ): AsyncIterable<TxEvent> {
+    const pattern = { hasAddress: { exactAddress: address } };
+    yield* this.watchTxByMatch(pattern, intersect);
+  }
+
+  async *watchTxForPaymentPart(
+    paymentPart: Uint8Array,
+    intersect?: ChainPoint[]
+  ): AsyncIterable<TxEvent> {
+    const pattern = { hasAddress: { paymentPart } };
+    yield* this.watchTxByMatch(pattern, intersect);
+  }
+
+  async *watchTxForDelegationPart(
+    delegationPart: Uint8Array,
+    intersect?: ChainPoint[]
+  ): AsyncIterable<TxEvent> {
+    const pattern = { hasAddress: { delegationPart } };
+    yield* this.watchTxByMatch(pattern, intersect);
+  }
+
+  async *watchTxForAsset(
+    policyId?: Uint8Array,
+    assetName?: Uint8Array,
+    intersect?: ChainPoint[]
+  ): AsyncIterable<TxEvent> {
+    const pattern = policyId
+      ? { movesAsset: { policyId } }
+      : { movesAsset: { assetName } };
+    yield* this.watchTxByMatch(pattern, intersect);
   }
 }

@@ -1,7 +1,5 @@
-import {
-  Interceptor,
-} from "@connectrpc/connect";
-
+import { Interceptor } from "@connectrpc/connect";
+import { submit } from "@utxorpc/spec";
 export function metadataInterceptor(
   options?: ClientBuilderOptions
 ): Interceptor {
@@ -20,6 +18,17 @@ export type GenericTipEvent<Block, Point> =
   | { action: "apply"; block: Block }
   | { action: "undo"; block: Block }
   | { action: "reset"; point: Point };
+
+export type GenericTxEvent<Tx> =
+  | { action: "apply"; Tx: Tx | undefined }
+  | { action: "undo"; Tx: Tx | undefined };
+
+export type GenericTxInMempoolEvent<Tx> = {
+  stage: submit.Stage;
+  txoRef: Uint8Array;
+  nativeBytes: Uint8Array;
+  Tx: Tx | undefined;
+};
 
 export type GenericUtxo<Ref, Parsed> = {
   txoRef: Ref;
