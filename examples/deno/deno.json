@@ -1,0 +1,6 @@
+{
+  "tasks": {
+    "start": "deno run dump-history.ts"
+  },
+  "imports": { "@utxorpc/sdk": "npm:@utxorpc/sdk@^0.6.3" }
+}
