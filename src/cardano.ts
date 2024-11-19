@@ -34,6 +34,12 @@ export type TxEvent = GenericTxEvent<cardano.Tx>;
 export type MempoolEvent = GenericTxInMempoolEvent<cardano.Tx>;
 export type TxHash = Uint8Array;
 export type TxCbor = Uint8Array;
+export type TxEval = {
+  fee: number;
+  exUnits?: cardano.ExUnits;
+  errors: cardano.EvalError[];
+  traces: cardano.EvalTrace[];
+};
 
 function toMempoolEvent(txInMempool: submit.TxInMempool): MempoolEvent {
   return {
@@ -91,6 +97,24 @@ function anyParamsToChain(p: query.AnyChainParams): cardano.PParams {
   switch (p.params.case) {
     case "cardano":
       return p.params.value;
+    default:
+      throw Error("source is not Cardano data");
+  }
+}
+
+function anyEvalToChain(p: submit.AnyChainEval): TxEval {
+  switch (p.chain.case) {
+    case "cardano":
+      const cardanoEval = p.chain.value;
+      return {
+        fee: Number(cardanoEval.fee),
+        exUnits: cardanoEval.exUnits ? {
+          steps: Number(cardanoEval.exUnits.steps),
+          memory: Number(cardanoEval.exUnits.memory),
+        } : undefined,
+        errors: cardanoEval.errors ? cardanoEval.errors.map(error => ({ msg: error.msg })) : [],
+        traces: cardanoEval.traces ? cardanoEval.traces.map(trace => ({ msg: trace.msg })) : [],
+      } as TxEval;
     default:
       throw Error("source is not Cardano data");
   }
@@ -311,6 +335,18 @@ export class SubmitClient {
     });
 
     return res.ref[0];
+  }
+
+  async evalTx(tx: TxCbor): Promise<TxEval> {
+    const res = await this.inner.evalTx({
+      tx: [tx].map((cbor) => ({ type: { case: "raw", value: cbor } })),
+    });
+  
+    const txEval = res.report.map(anyEvalToChain).find(evaluation => evaluation !== undefined);
+    if (txEval === undefined) {
+      throw new Error("Failed evaluating provided transaction");
+    }
+    return txEval;
   }
 
   async *waitForTx(txHash: TxHash): AsyncIterable<submit.Stage> {
