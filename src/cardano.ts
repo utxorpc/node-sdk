@@ -316,7 +316,7 @@ export class SubmitClient {
   async evalTx(tx: TxCbor): Promise<submit.EvalTxResponse> {
     const res = await this.inner.evalTx({
       tx: [tx].map((cbor) => ({ type: { case: "raw", value: cbor } })),
-    })
+    });
     
     return res;
   }
