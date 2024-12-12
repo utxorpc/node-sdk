@@ -313,6 +313,14 @@ export class SubmitClient {
     return res.ref[0];
   }
 
+  async evalTx(tx: TxCbor): Promise<submit.EvalTxResponse> {
+    const res = await this.inner.evalTx({
+      tx: [tx].map((cbor) => ({ type: { case: "raw", value: cbor } })),
+    });
+    
+    return res;
+  }
+
   async *waitForTx(txHash: TxHash): AsyncIterable<submit.Stage> {
     const updates = this.inner.waitForTx({
       ref: [txHash],
