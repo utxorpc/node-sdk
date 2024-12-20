@@ -141,6 +141,11 @@ export class SyncClient {
     }
   }
 
+  async readTip(): Promise<ChainPoint> {
+    const res = await this.inner.readTip({});
+    return blockRefToPoint(res.tip!);
+  }
+
   async fetchBlock(p: ChainPoint): Promise<cardano.Block> {
     const req = pointToBlockRef(p);
     const res = await this.inner.fetchBlock({ ref: [req] });
