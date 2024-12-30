@@ -141,6 +141,11 @@ export class SyncClient {
     }
   }
 
+  async readTip(): Promise<ChainPoint> {
+    const res = await this.inner.readTip({});
+    return blockRefToPoint(res.tip!);
+  }
+
   async fetchBlock(p: ChainPoint): Promise<cardano.Block> {
     const req = pointToBlockRef(p);
     const res = await this.inner.fetchBlock({ ref: [req] });
@@ -311,6 +316,14 @@ export class SubmitClient {
     });
 
     return res.ref[0];
+  }
+
+  async evalTx(tx: TxCbor): Promise<submit.EvalTxResponse> {
+    const res = await this.inner.evalTx({
+      tx: [tx].map((cbor) => ({ type: { case: "raw", value: cbor } })),
+    });
+    
+    return res;
   }
 
   async *waitForTx(txHash: TxHash): AsyncIterable<submit.Stage> {
