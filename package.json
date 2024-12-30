@@ -1,6 +1,6 @@
 {
   "name": "@utxorpc/sdk",
-  "version": "0.6.4",
+  "version": "0.6.5",
   "description": "A client library to interact with UTxO RPC compliant endpoints",
   "main": "./lib/node/index.js",
   "module": "./lib/node/index.mjs",
@@ -28,13 +28,13 @@
   "devDependencies": {
     "tsup": "^8.2.4",
     "tsx": "4.19.0",
-    "typescript": "5.5.4"
+    "typescript": "5.5.4",
+    "@types/node": "22.10.2"
   },
   "dependencies": {
     "@connectrpc/connect": "1.4",
     "@connectrpc/connect-node": "1.4",
     "@connectrpc/connect-web": "1.4",
-    "@types/node": "20.14.10",
     "@utxorpc/spec": "0.15.0",
     "buffer": "^6.0.3"
   },
