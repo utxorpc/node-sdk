@@ -251,7 +251,7 @@ export class QueryClient {
     name?: Uint8Array
   ): Promise<Utxo[]> {
     return this.searchUtxosByMatch({
-      asset: policyId ? { policyId } : { assetName: name },
+      asset: (policyId && name) ? { policyId: policyId, assetName: name } : policyId ? { policyId } : { assetName: name },
     });
   }
 
@@ -264,7 +264,7 @@ export class QueryClient {
       address: {
         exactAddress: address,
       },
-      asset: policyId ? { policyId } : { assetName: name },
+      asset: (policyId && name) ? { policyId: policyId, assetName: name } : policyId ? { policyId } : { assetName: name },
     });
   }
 
@@ -277,7 +277,7 @@ export class QueryClient {
       address: {
         paymentPart: paymentPart,
       },
-      asset: policyId ? { policyId } : { assetName: name },
+      asset: (policyId && name) ? { policyId: policyId, assetName: name } : policyId ? { policyId } : { assetName: name },
     });
   }
 
@@ -290,7 +290,7 @@ export class QueryClient {
       address: {
         delegationPart: delegationPart,
       },
-      asset: policyId ? { policyId } : { assetName: name },
+      asset: (policyId && name) ? { policyId: policyId, assetName: name } : policyId ? { policyId } : { assetName: name },
     });
   }
 }
