@@ -31,8 +31,7 @@
     "tsx": "4.19.0",
     "typescript": "5.5.4",
     "@types/node": "22.10.2",
-    "vitest": "^2.1.8",
-    "@dcspark/cardano-multiplatform-lib-nodejs": "6.0.1"
+    "vitest": "^2.1.8"
   },
   "dependencies": {
     "@connectrpc/connect": "1.4",
