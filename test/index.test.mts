@@ -1,22 +1,5 @@
-import { vi, describe, test, expect } from "vitest";
+import { describe, test, expect } from "vitest";
 import { QueryClient, SyncClient } from "../src/cardano";
-import { createRouterTransport } from "@connectrpc/connect";
-import {
-  queryConnect,
-} from "@utxorpc/spec";
-import genesis from './shelley-genesis.json';
-
-// const mockTransport = createRouterTransport(({ service }) => {
-//   service(queryConnect.QueryService, {
-//     readParams: () => ({ sentence: "I feel happy." } as any),
-//   });
-// });
-
-// // vitest mock createPromiseClient in @connectrpc/connect to createRouterTransport
-// vi.mock("@connectrpc/connect", () => ({
-//   createPromiseClient: vi.fn().mockImplementation(() => mockTransport),
-// }));
-
 
 describe("QueryClient", () => {
   let queryClient = new QueryClient({
@@ -56,29 +39,104 @@ describe("QueryClient", () => {
   });
   test("searchUtxosByPaymentPart", async () => {
     const utxo = await queryClient.searchUtxosByPaymentPart(Buffer.from("c8c47610a36034aac6fc58848bdae5c278d994ff502c05455e3b3ee8", "hex"));
-    console.log(utxo);
     expect(Buffer.from(utxo[0].nativeBytes!).toString("hex")).toEqual("82583900c8c47610a36034aac6fc58848bdae5c278d994ff502c05455e3b3ee8f8ed3a0eea0ef835ffa7bbfcde55f7fe9d2cc5d55ea62cecb42bab3c1b00000002540be400");
+  });
+  test("searchUtxosByDelegationPart", async () => {
+    const utxo = await queryClient.searchUtxosByDelegationPart(Buffer.from("f8ed3a0eea0ef835ffa7bbfcde55f7fe9d2cc5d55ea62cecb42bab3c", "hex"));
+    expect(Buffer.from(utxo[0].nativeBytes!).toString("hex")).toEqual("82583900c8c47610a36034aac6fc58848bdae5c278d994ff502c05455e3b3ee8f8ed3a0eea0ef835ffa7bbfcde55f7fe9d2cc5d55ea62cecb42bab3c1b00000002540be400");
+  });
+  test("searchUtxosByAsset", async () => {
+    const utxo = await queryClient.searchUtxosByAsset();
+    expect(utxo.length).toBe(0); // TODO: genesis has no custom assets, so we'd need to setup the tests for this
+  });
+  test("searchUtxosByAddressWithAsset", async () => {
+    const utxo = await queryClient.searchUtxosByAddressWithAsset(Buffer.from("82d818582583581c73d9939a59f42a1f3ca3b6aba56f82e52de28c70cbe36870cff5a197a10242182a001aaa7d769f", "hex"));
+    expect(utxo.length).toBe(0); // TODO: genesis has no custom assets, so we'd need to setup the tests for this
+  });
+  test("searchUtxosByPaymentPartWithAsset", async () => {
+    const utxo = await queryClient.searchUtxosByPaymentPartWithAsset(Buffer.from("c8c47610a36034aac6fc58848bdae5c278d994ff502c05455e3b3ee8", "hex"));
+    expect(utxo.length).toBe(0); // TODO: genesis has no custom assets, so we'd need to setup the tests for this
+  });
+  test("searchUtxosByDelegationPartWithAsset", async () => {
+    const utxo = await queryClient.searchUtxosByDelegationPartWithAsset(Buffer.from("f8ed3a0eea0ef835ffa7bbfcde55f7fe9d2cc5d55ea62cecb42bab3c", "hex"));
+    expect(utxo.length).toBe(0); // TODO: genesis has no custom assets, so we'd need to setup the tests for this
   });
 });
 
-// test('foo', async () => {
-  
-//   let syncClient = new SyncClient({
-//     uri: "http://localhost:50051",
-//   });
-//   console.log();
-//   // for await (const event of syncClient.followTip([{
-//   //   slot: 601,
-//   //   hash: "f2158441116a89f567534577323deddc9b44422a06bebfde24b666292e4e3123",
-//   // }])) {
-//   //   console.log(event);
-//   // }
-//   // const params = await queryClient.readUtxosByOutputRef([
-//   //   {
-//   //     txHash: Buffer.from("a6ce90a9a5ef8ef73858effdae375ba50f302d3c6c8b587a15eaa8fa98ddf741", "hex"),
-//   //     outputIndex: 0,
-//   //   },
-//   // ]);
-//   // console.log(params);
-//   // expect(1).toBe(1)
-// })
+describe("SyncClient", () => {
+  let syncClient = new SyncClient({
+    uri: "http://localhost:50051",
+  });
+  test("followTip", async () => {
+    const generator = syncClient.followTip([{
+      slot: 601,
+      hash: 'f2158441116a89f567534577323deddc9b44422a06bebfde24b666292e4e3123',
+    }]);
+    const block1 = await (generator[Symbol.asyncIterator]()).next();
+    expect(block1).toStrictEqual({
+      value: {
+        action: 'reset',
+        point: {
+          slot: '601',
+          hash: 'f2158441116a89f567534577323deddc9b44422a06bebfde24b666292e4e3123'
+        }
+      },
+      done: false
+    });
+    const block2 = await (generator[Symbol.asyncIterator]()).next();
+    expect({ body: block2.value.block.body?.toJson(), header: block2.value.block.header?.toJson() }).toEqual({
+      body: {
+        // TODO: this is missing for some reason
+        // tx: [],
+      },
+      header: {
+        hash: "ENFFlzZi/rS1v86fbYRg+3xhAW9r7LzZ1MggN6m86rw=",
+        slot: "602",
+        height: "1",
+      }
+    })
+  });
+  test("readTip", async () => {
+    const tip = await syncClient.readTip();
+    expect(Number(tip.slot)).toBeGreaterThan(1)
+  });
+  test("fetchBlock", async () => {
+    const block = await syncClient.fetchBlock({
+      slot: 601,
+      hash: 'f2158441116a89f567534577323deddc9b44422a06bebfde24b666292e4e3123',
+    });
+    expect({ body: block.body?.toJson(), header: block.header?.toJson() }).toEqual({
+      body: {
+        // TODO: this is missing for some reason
+        // tx: [],
+      },
+      header: {
+        hash: "DdxBJbBKFI8l/2ybtQaqSs/7xEkCBymZGP3vwHWYFiU=",
+        slot: "601",
+        // TODO: this is missing for some reason
+        // height: "0",
+      }
+    })
+  });
+  test("fetchHistory", async () => {
+    const block = await syncClient.fetchHistory({
+      slot: 601,
+      hash: 'f2158441116a89f567534577323deddc9b44422a06bebfde24b666292e4e3123',
+    });
+    expect({ body: block.body?.toJson(), header: block.header?.toJson() }).toEqual({
+      body: {
+        // TODO: this is missing for some reason
+        // tx: [],
+      },
+      header: {
+        hash: "DdxBJbBKFI8l/2ybtQaqSs/7xEkCBymZGP3vwHWYFiU=",
+        slot: "601",
+        // TODO: this is missing for some reason
+        // height: "0",
+      }
+    })
+  });
+});
+
+// TODO: test SubmitClient. It's hard since it's stateful, so we need to mock the backend
+// TODO: test WatchClient. It's hard since it's stateful, so we need to mock the backend
