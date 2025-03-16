@@ -9,7 +9,8 @@
     "build": "npm run build:node && npm run build:browser",
     "build:node": "tsup src/index.ts --env.NODE_ENV=node",
     "build:browser": "tsup src/index.ts --env.NODE_ENV=browser",
-    "prepublish": "npm run build"
+    "prepublish": "npm run build",
+    "test": "vitest"
   },
   "repository": {
     "type": "git",
@@ -29,7 +30,8 @@
     "tsup": "^8.2.4",
     "tsx": "4.19.0",
     "typescript": "5.5.4",
-    "@types/node": "22.10.2"
+    "@types/node": "22.10.2",
+    "vitest": "^2.1.8"
   },
   "dependencies": {
     "@connectrpc/connect": "1.4",
