@@ -152,12 +152,12 @@ export class SyncClient {
     return anyChainToBlock(res.block[0])!;
   }
 
-  async fetchHistory(p: ChainPoint, maxItems = 1): Promise<cardano.Block> {
+  async fetchHistory(p: ChainPoint | undefined, maxItems = 1): Promise<cardano.Block> {
     const req = new sync.DumpHistoryRequest({
-      startToken: new sync.BlockRef({
+      startToken: p ? new sync.BlockRef({
         index: BigInt(p.slot),
         hash: Buffer.from(p.hash, "hex"),
-      }),
+      }) : undefined,
       maxItems: maxItems,
     });
 
