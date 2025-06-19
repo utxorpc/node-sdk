@@ -27,16 +27,18 @@
   },
   "homepage": "https://github.com/utxorpc/node-sdk#readme",
   "devDependencies": {
+    "@types/node": "22.10.2",
     "tsup": "^8.2.4",
     "tsx": "4.19.0",
     "typescript": "5.5.4",
-    "@types/node": "22.10.2",
     "vitest": "^2.1.8"
   },
   "dependencies": {
+    "@blaze-cardano/sdk": "^0.2.32",
     "@connectrpc/connect": "1.4",
     "@connectrpc/connect-node": "1.4",
     "@connectrpc/connect-web": "1.4",
+    "@utxorpc/blaze-provider": "^0.3.5",
     "@utxorpc/spec": "0.16.0",
     "buffer": "^6.0.3"
   },
