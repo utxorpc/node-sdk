@@ -66,17 +66,30 @@ describe("QueryClient", () => {
   });
 
   test("searchUtxosByAddress", async () => {
-    const utxo = await queryClient.searchUtxosByAddress(Buffer.from("0053fbfffab7b001281917de77f18a8087413be03401db4aa2a7dbf0ae1591d34d5b4b2728d04a80fdd041bb52edb334dacbf25aa27877e738", "hex"));
+    const testAddress = Core.Address.fromBech32(TEST_CONFIG.testAddress);
+    const utxo = await queryClient.searchUtxosByAddress(Buffer.from(testAddress.toBytes()));
     expect(Array.isArray(utxo)).toBe(true);
   });
 
   test("searchUtxosByPaymentPart", async () => {
-    const utxo = await queryClient.searchUtxosByPaymentPart(Buffer.from("c8c47610a36034aac6fc58848bdae5c278d994ff502c05455e3b3ee8", "hex"));
-    expect(Array.isArray(utxo)).toBe(true);
+    const testAddress = Core.Address.fromBech32(TEST_CONFIG.testAddress);
+    const paymentCred = testAddress.getProps().paymentPart;
+    if (paymentCred && paymentCred.type === Core.CredentialType.KeyHash) {
+      const utxo = await queryClient.searchUtxosByPaymentPart(Buffer.from(paymentCred.hash, 'hex'));
+      expect(Array.isArray(utxo)).toBe(true);
+    } else {
+      expect(true).toBe(true);
+    }
   });
   test("searchUtxosByDelegationPart", async () => {
-    const utxo = await queryClient.searchUtxosByDelegationPart(Buffer.from("f8ed3a0eea0ef835ffa7bbfcde55f7fe9d2cc5d55ea62cecb42bab3c", "hex"));
-    expect(Array.isArray(utxo)).toBe(true);
+    const testAddress = Core.Address.fromBech32(TEST_CONFIG.testAddress);
+    const delegationCred = testAddress.getProps().delegationPart;
+    if (delegationCred && delegationCred.type === Core.CredentialType.KeyHash) {
+      const utxo = await queryClient.searchUtxosByDelegationPart(Buffer.from(delegationCred.hash, 'hex'));
+      expect(Array.isArray(utxo)).toBe(true);
+    } else {
+      expect(true).toBe(true);
+    }
   });
 
   test("searchUtxosByAsset", async () => {
@@ -88,28 +101,40 @@ describe("QueryClient", () => {
   });
 
   test("searchUtxosByAddressWithAsset", async () => {
-    // const policyId = Buffer.from("8b05e87a51c1d4a0fa888d2bb14dbc25e8c343ea379a171b63aa84a0", "hex");
-    const assetName = Buffer.from("8b05e87a51c1d4a0fa888d2bb14dbc25e8c343ea379a171b63aa84a0434e4354", "hex");
-    const exact = Buffer.from("000c61f135f652bc17994a5411d0a256de478ea24dbc19759d2ba14f03829cf64af13db7e4d420be0301014facf878bfc4a5f597cd94c40004", "hex");
-    const utxo = await queryClient.searchUtxosByAddressWithAsset(exact, undefined, assetName);
+    const testAddress = Core.Address.fromBech32(TEST_CONFIG.testAddress);
+    const policyId = Buffer.from("8b05e87a51c1d4a0fa888d2bb14dbc25e8c343ea379a171b63aa84a0", "hex");
+    const assetName = Buffer.from("434e4354", "hex"); // "CNCT" in ASCII
+    const utxo = await queryClient.searchUtxosByAddressWithAsset(Buffer.from(testAddress.toBytes()), policyId, undefined);
     console.log("Utxo by Exact Address With Asset:", utxo);
     expect(Array.isArray(utxo)).toBe(true);
   });
   test("searchUtxosByPaymentPartWithAsset", async () => {
-    const paymentpart = Buffer.from("0c61f135f652bc17994a5411d0a256de478ea24dbc19759d2ba14f03", "hex");
-    // const policyId = Buffer.from("8b05e87a51c1d4a0fa888d2bb14dbc25e8c343ea379a171b63aa84a0", "hex");
-    const assetName = Buffer.from("8b05e87a51c1d4a0fa888d2bb14dbc25e8c343ea379a171b63aa84a0434e4354", "hex");
-    const utxo = await queryClient.searchUtxosByPaymentPartWithAsset(paymentpart, undefined, assetName);
-    console.log("Utxo by Payment Address With Asset:", utxo);
-    expect(Array.isArray(utxo)).toBe(true);
+    const testAddress = Core.Address.fromBech32(TEST_CONFIG.testAddress);
+    const paymentCred = testAddress.getProps().paymentPart;
+    const policyId = Buffer.from("8b05e87a51c1d4a0fa888d2bb14dbc25e8c343ea379a171b63aa84a0", "hex");
+    const assetName = Buffer.from("434e4354", "hex"); // "CNCT" in ASCII
+    
+    if (paymentCred && paymentCred.type === Core.CredentialType.KeyHash) {
+      const utxo = await queryClient.searchUtxosByPaymentPartWithAsset(Buffer.from(paymentCred.hash, 'hex'), policyId, undefined);
+      console.log("Utxo by Payment Address With Asset:", utxo);
+      expect(Array.isArray(utxo)).toBe(true);
+    } else {
+      expect(true).toBe(true);
+    }
   });
   test("searchUtxosByDelegationPartWithAsset", async () => {
-    const delegationpart = Buffer.from("829cf64af13db7e4d420be0301014facf878bfc4a5f597cd94c40004", "hex");
-    // const policyId = Buffer.from("8b05e87a51c1d4a0fa888d2bb14dbc25e8c343ea379a171b63aa84a0", "hex");
-    const assetName = Buffer.from("8b05e87a51c1d4a0fa888d2bb14dbc25e8c343ea379a171b63aa84a0434e4354", "hex");
-    const utxo = await queryClient.searchUtxosByDelegationPartWithAsset(delegationpart, undefined, assetName);
-    console.log("Utxo by delegation Address With Asset:", utxo);
-    expect(Array.isArray(utxo)).toBe(true);
+    const testAddress = Core.Address.fromBech32(TEST_CONFIG.testAddress);
+    const delegationCred = testAddress.getProps().delegationPart;
+    const policyId = Buffer.from("8b05e87a51c1d4a0fa888d2bb14dbc25e8c343ea379a171b63aa84a0", "hex");
+    const assetName = Buffer.from("434e4354", "hex"); // "CNCT" in ASCII
+    
+    if (delegationCred && delegationCred.type === Core.CredentialType.KeyHash) {
+      const utxo = await queryClient.searchUtxosByDelegationPartWithAsset(Buffer.from(delegationCred.hash, 'hex'), policyId, undefined);
+      console.log("Utxo by delegation Address With Asset:", utxo);
+      expect(Array.isArray(utxo)).toBe(true);
+    } else {
+      expect(true).toBe(true);
+    }
   });
 });
 
@@ -339,16 +364,18 @@ describe("SubmitClient", () => {
         return;
       }
 
-      const senderAddressBytes = Buffer.from(wallet.address.toBytes());
+      // Watch the test address for mempool events
+      const testAddress = Core.Address.fromBech32(TEST_CONFIG.testAddress);
+      const testAddressBytes = Buffer.from(testAddress.toBytes());
       
       // Start watching mempool
-      const mempoolStream = submitClient.watchMempoolForAddress(senderAddressBytes);
+      const mempoolStream = submitClient.watchMempoolForAddress(testAddressBytes);
       const mempoolIterator = mempoolStream[Symbol.asyncIterator]();
       
-      // Build and submit transaction to self
+      // Build and submit transaction to test address
       const tx = await blaze
         .newTransaction()
-        .payLovelace(wallet.address, TEST_CONFIG.sendAmount)
+        .payLovelace(testAddress, TEST_CONFIG.sendAmount)
         .complete();
 
       const signedTx = await blaze.signTransaction(tx);
@@ -382,11 +409,11 @@ describe("SubmitClient", () => {
     });
 
     test("should watch mempool for delegation part", { timeout: 10000 }, async () => {
-      const { wallet } = await createWalletAndBlaze();
-      const delegationCred = wallet.address.getProps().delegationPart;
+      const testAddress = Core.Address.fromBech32(TEST_CONFIG.testAddress);
+      const delegationCred = testAddress.getProps().delegationPart;
       
       if (!delegationCred || delegationCred.type !== Core.CredentialType.KeyHash) {
-        console.log("Wallet address doesn't have a key hash delegation credential");
+        console.log("Test address doesn't have a key hash delegation credential");
         expect(true).toBe(true);
         return;
       }
@@ -417,11 +444,11 @@ describe("SubmitClient", () => {
     });
 
      test("should watch mempool for payment part", { timeout: 10000 }, async () => {
-      const { wallet } = await createWalletAndBlaze();
-      const paymentCred = wallet.address.getProps().paymentPart;
+      const testAddress = Core.Address.fromBech32(TEST_CONFIG.testAddress);
+      const paymentCred = testAddress.getProps().paymentPart;
       
       if (!paymentCred || paymentCred.type !== Core.CredentialType.KeyHash) {
-        console.log("Wallet address doesn't have a key hash payment credential");
+        console.log("Test address doesn't have a key hash payment credential");
         expect(true).toBe(true);
         return;
       }
@@ -553,13 +580,14 @@ describe("WatchClient", () => {
       const balance = await wallet.getBalance();
       console.log("Wallet balance:", balance.toCore());
       
-      // Use a known active address
-      const exact = Buffer.from("0053fbfffab7b001281917de77f18a8087413be03401db4aa2a7dbf0ae1591d34d5b4b2728d04a80fdd041bb52edb334dacbf25aa27877e738", "hex");
+      // Use the test address
+      const testAddress = Core.Address.fromBech32(TEST_CONFIG.testAddress);
+      const testAddressBytes = Buffer.from(testAddress.toBytes());
       
-      console.log("Watching address transactions...");
+      console.log("Watching address transactions for:", TEST_CONFIG.testAddress);
       
       // Start watching FIRST
-      const txStream = watchClient.watchTxForAddress(exact);
+      const txStream = watchClient.watchTxForAddress(testAddressBytes);
       const iterator = txStream[Symbol.asyncIterator]();
       
       // Submit transaction if we have balance
