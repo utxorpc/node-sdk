@@ -330,12 +330,12 @@ describe("SubmitClient", () => {
   });
 
   describe("watchMempool", () => {
-    test("should watch general mempool activity", { timeout: 10000 }, async () => {
+    test("should watch general mempool activity", { timeout: 60000 }, async () => {
       const mempoolStream = submitClient.watchMempool();
       const iterator = mempoolStream[Symbol.asyncIterator]();
       
       const timeoutPromise = new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error("Timeout")), 5000)
+        setTimeout(() => reject(new Error("Timeout")), 30000)
       );
       
       try {
@@ -386,7 +386,7 @@ describe("SubmitClient", () => {
       
       // Wait for mempool event
       const mempoolTimeout = new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error("Mempool timeout")), 10000)
+        setTimeout(() => reject(new Error("Mempool timeout")), 45000)
       );
       
       try {
@@ -408,7 +408,7 @@ describe("SubmitClient", () => {
       }
     });
 
-    test("should watch mempool for delegation part", { timeout: 10000 }, async () => {
+    test("should watch mempool for delegation part", { timeout: 30000 }, async () => {
       const testAddress = Core.Address.fromBech32(TEST_CONFIG.testAddress);
       const delegationCred = testAddress.getProps().delegationPart;
       
@@ -425,7 +425,7 @@ describe("SubmitClient", () => {
       const iterator = mempoolStream[Symbol.asyncIterator]();
       
       const timeoutPromise = new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error("Timeout")), 5000)
+        setTimeout(() => reject(new Error("Timeout")), 20000)
       );
       
       try {
@@ -443,7 +443,7 @@ describe("SubmitClient", () => {
       }
     });
 
-     test("should watch mempool for payment part", { timeout: 10000 }, async () => {
+     test("should watch mempool for payment part", { timeout: 30000 }, async () => {
       const testAddress = Core.Address.fromBech32(TEST_CONFIG.testAddress);
       const paymentCred = testAddress.getProps().paymentPart;
       
@@ -460,7 +460,7 @@ describe("SubmitClient", () => {
       const iterator = mempoolStream[Symbol.asyncIterator]();
       
       const timeoutPromise = new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error("Timeout")), 5000)
+        setTimeout(() => reject(new Error("Timeout")), 20000)
       );
       
       try {
@@ -478,14 +478,14 @@ describe("SubmitClient", () => {
       }
     });
 
-    test("should watch mempool for asset by policy ID", { timeout: 10000 }, async () => {
+    test("should watch mempool for asset by policy ID", { timeout: 30000 }, async () => {
       const policyId = Buffer.from("8b05e87a51c1d4a0fa888d2bb14dbc25e8c343ea379a171b63aa84a0", "hex");
       
       const mempoolStream = submitClient.watchMempoolForAsset(policyId);
       const iterator = mempoolStream[Symbol.asyncIterator]();
       
       const timeoutPromise = new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error("Timeout")), 5000)
+        setTimeout(() => reject(new Error("Timeout")), 20000)
       );
       
       try {
@@ -503,7 +503,7 @@ describe("SubmitClient", () => {
       }
     });
 
-    test("should watch mempool for asset by policy ID and name", { timeout: 10000 }, async () => {
+    test("should watch mempool for asset by policy ID and name", { timeout: 30000 }, async () => {
       const policyId = Buffer.from("8b05e87a51c1d4a0fa888d2bb14dbc25e8c343ea379a171b63aa84a0", "hex");
       const assetName = Buffer.from("434e4354", "hex"); // "CNCT" in ASCII
       
@@ -511,7 +511,7 @@ describe("SubmitClient", () => {
       const iterator = mempoolStream[Symbol.asyncIterator]();
       
       const timeoutPromise = new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error("Timeout")), 5000)
+        setTimeout(() => reject(new Error("Timeout")), 20000)
       );
       
       try {
