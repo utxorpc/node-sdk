@@ -25,15 +25,15 @@ export type GenericTxEvent<Tx> =
 
 export type GenericTxInMempoolEvent<Tx> = {
   stage: submit.Stage;
-  txoRef: Uint8Array;
-  nativeBytes: Uint8Array;
+  txoRef: Uint8Array<ArrayBuffer>;
+  nativeBytes: Uint8Array<ArrayBuffer>;
   Tx: Tx | undefined;
 };
 
 export type GenericUtxo<Ref, Parsed> = {
   txoRef: Ref;
   parsedValued: Parsed | undefined;
-  nativeBytes: Uint8Array | undefined;
+  nativeBytes: Uint8Array<ArrayBuffer> | undefined;
 };
 
 export type ClientBuilderOptions = {
