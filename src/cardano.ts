@@ -194,7 +194,7 @@ export class QueryClient {
   }
 
   async readUtxosByOutputRef(
-    refs: { txHash: Uint8Array; outputIndex: number }[]
+    refs: { txHash: Uint8Array<ArrayBuffer>; outputIndex: number }[]
   ): Promise<Utxo[]> {
     const searchResponse = await this.inner.readUtxos({
       keys: refs.map((ref) => {
@@ -220,7 +220,7 @@ export class QueryClient {
     return searchResponse.items.map(anyUtxoToChain);
   }
 
-  async searchUtxosByAddress(address: Uint8Array): Promise<Utxo[]> {
+  async searchUtxosByAddress(address: Uint8Array<ArrayBuffer>): Promise<Utxo[]> {
     return this.searchUtxosByMatch({
       address: {
         exactAddress: address,
@@ -228,7 +228,7 @@ export class QueryClient {
     });
   }
 
-  async searchUtxosByPaymentPart(paymentPart: Uint8Array): Promise<Utxo[]> {
+  async searchUtxosByPaymentPart(paymentPart: Uint8Array<ArrayBuffer>): Promise<Utxo[]> {
     return this.searchUtxosByMatch({
       address: {
         paymentPart: paymentPart,
@@ -237,7 +237,7 @@ export class QueryClient {
   }
 
   async searchUtxosByDelegationPart(
-    delegationPart: Uint8Array
+    delegationPart: Uint8Array<ArrayBuffer>
   ): Promise<Utxo[]> {
     return this.searchUtxosByMatch({
       address: {
@@ -247,8 +247,8 @@ export class QueryClient {
   }
 
   async searchUtxosByAsset(
-    policyId?: Uint8Array,
-    name?: Uint8Array
+    policyId?: Uint8Array<ArrayBuffer>,
+    name?: Uint8Array<ArrayBuffer>
   ): Promise<Utxo[]> {
     return this.searchUtxosByMatch({
       asset: (policyId && name) ? { policyId: policyId, assetName: name } : policyId ? { policyId } : { assetName: name },
@@ -256,9 +256,9 @@ export class QueryClient {
   }
 
   async searchUtxosByAddressWithAsset(
-    address: Uint8Array,
-    policyId?: Uint8Array,
-    name?: Uint8Array
+    address: Uint8Array<ArrayBuffer>,
+    policyId?: Uint8Array<ArrayBuffer>,
+    name?: Uint8Array<ArrayBuffer>
   ): Promise<Utxo[]> {
     return this.searchUtxosByMatch({
       address: {
@@ -269,9 +269,9 @@ export class QueryClient {
   }
 
   async searchUtxosByPaymentPartWithAsset(
-    paymentPart: Uint8Array,
-    policyId?: Uint8Array,
-    name?: Uint8Array
+    paymentPart: Uint8Array<ArrayBuffer>,
+    policyId?: Uint8Array<ArrayBuffer>,
+    name?: Uint8Array<ArrayBuffer>
   ): Promise<Utxo[]> {
     return this.searchUtxosByMatch({
       address: {
@@ -282,9 +282,9 @@ export class QueryClient {
   }
 
   async searchUtxosByDelegationPartWithAsset(
-    delegationPart: Uint8Array,
-    policyId?: Uint8Array,
-    name?: Uint8Array
+    delegationPart: Uint8Array<ArrayBuffer>,
+    policyId?: Uint8Array<ArrayBuffer>,
+    name?: Uint8Array<ArrayBuffer>
   ): Promise<Utxo[]> {
     return this.searchUtxosByMatch({
       address: {
@@ -357,7 +357,7 @@ export class SubmitClient {
   }
 
   async *watchMempoolForAddress(
-    address: Uint8Array
+    address: Uint8Array<ArrayBuffer>
   ): AsyncIterable<MempoolEvent> {
     yield* this.watchMempoolByMatch({
       hasAddress: { exactAddress: address },
@@ -365,7 +365,7 @@ export class SubmitClient {
   }
 
   async *watchMempoolForPaymentPart(
-    paymentPart: Uint8Array
+    paymentPart: Uint8Array<ArrayBuffer>
   ): AsyncIterable<MempoolEvent> {
     yield* this.watchMempoolByMatch({
       hasAddress: { paymentPart: paymentPart },
@@ -373,7 +373,7 @@ export class SubmitClient {
   }
 
   async *watchMempoolForDelegationPart(
-    delegationPart: Uint8Array
+    delegationPart: Uint8Array<ArrayBuffer>
   ): AsyncIterable<MempoolEvent> {
     yield* this.watchMempoolByMatch({
       hasAddress: { delegationPart: delegationPart },
@@ -381,8 +381,8 @@ export class SubmitClient {
   }
 
   async *watchMempoolForAsset(
-    policyId?: Uint8Array,
-    assetName?: Uint8Array
+    policyId?: Uint8Array<ArrayBuffer>,
+    assetName?: Uint8Array<ArrayBuffer>
   ): AsyncIterable<MempoolEvent> {
     yield* this.watchMempoolByMatch({
       movesAsset: policyId ? { policyId } : { assetName },
@@ -442,7 +442,7 @@ export class WatchClient {
   }
 
   async *watchTxForAddress(
-    address: Uint8Array,
+    address: Uint8Array<ArrayBuffer>,
     intersect?: ChainPoint[]
   ): AsyncIterable<TxEvent> {
     const pattern = { hasAddress: { exactAddress: address } };
@@ -450,7 +450,7 @@ export class WatchClient {
   }
 
   async *watchTxForPaymentPart(
-    paymentPart: Uint8Array,
+    paymentPart: Uint8Array<ArrayBuffer>,
     intersect?: ChainPoint[]
   ): AsyncIterable<TxEvent> {
     const pattern = { hasAddress: { paymentPart } };
@@ -458,7 +458,7 @@ export class WatchClient {
   }
 
   async *watchTxForDelegationPart(
-    delegationPart: Uint8Array,
+    delegationPart: Uint8Array<ArrayBuffer>,
     intersect?: ChainPoint[]
   ): AsyncIterable<TxEvent> {
     const pattern = { hasAddress: { delegationPart } };
@@ -466,8 +466,8 @@ export class WatchClient {
   }
 
   async *watchTxForAsset(
-    policyId?: Uint8Array,
-    assetName?: Uint8Array,
+    policyId?: Uint8Array<ArrayBuffer>,
+    assetName?: Uint8Array<ArrayBuffer>,
     intersect?: ChainPoint[]
   ): AsyncIterable<TxEvent> {
     const pattern = policyId
