@@ -749,16 +749,17 @@ describe("WatchClient", () => {
     const expectedAddressBase64 = addressBytes.toString('base64');
     
     // Verify the transaction involves the watched address
-    if (event.Tx.inputs && event.Tx.inputs.length > 0) {
-      // Verify each input that has an address
-      event.Tx.inputs.forEach((input: { asOutput: { address: any; }; }) => {
-        if (input.asOutput?.address) {
-          const inputAddressBase64 = input.asOutput.address;
-          if (inputAddressBase64 === expectedAddressBase64) {
-            expect(inputAddressBase64).toBe(expectedAddressBase64);
-          }
+    if (event.Tx.outputs && event.Tx.outputs.length > 0) {
+      // Check if any output is sent to the watched address
+      const hasWatchedAddress = event.Tx.outputs.some((output: cardano.TxOutput) => {
+        if (output.address) {
+          // Convert Uint8Array to base64 string for comparison
+          const outputAddressBase64 = Buffer.from(output.address).toString('base64');
+          return outputAddressBase64 === expectedAddressBase64;
         }
+        return false;
       });
+      expect(hasWatchedAddress).toBe(true);
     }
   });
 
@@ -782,17 +783,17 @@ describe("WatchClient", () => {
     expect(event.Tx.hash.length).toBeGreaterThan(0);
     
     // Verify the transaction involves addresses with the correct payment credential
-    if (event.Tx.inputs && event.Tx.inputs.length > 0) {
-      // Verify each input has the correct payment credential
-      event.Tx.inputs.forEach((input: { asOutput: { address: WithImplicitCoercion<string> | { [Symbol.toPrimitive](hint: "string"): string; }; }; }) => {
-        if (input.asOutput?.address) {
-          const inputAddress = Core.Address.fromBytes(Buffer.from(input.asOutput.address, 'base64').toString('hex') as Core.HexBlob);
-          const inputPaymentCred = inputAddress.getProps().paymentPart;
-          if (inputPaymentCred?.hash === paymentCred.hash) {
-            expect(inputPaymentCred?.hash).toBe(paymentCred.hash);
-          }
+    if (event.Tx.outputs && event.Tx.outputs.length > 0) {
+      // Check if any output has the correct payment credential
+      const hasCorrectPaymentCred = event.Tx.outputs.some((output: cardano.TxOutput) => {
+        if (output.address) {
+          const outputAddress = Core.Address.fromBytes(Buffer.from(output.address).toString('hex') as Core.HexBlob);
+          const outputPaymentCred = outputAddress.getProps().paymentPart;
+          return outputPaymentCred?.hash === paymentCred.hash;
         }
+        return false;
       });
+      expect(hasCorrectPaymentCred).toBe(true);
     }
   });
 
@@ -816,17 +817,17 @@ describe("WatchClient", () => {
     expect(event.Tx.hash.length).toBeGreaterThan(0);
     
     // Verify the transaction involves addresses with the correct delegation credential
-    if (event.Tx.inputs && event.Tx.inputs.length > 0) {
-      // Verify each input has the correct delegation credential
-      event.Tx.inputs.forEach((input: { asOutput: { address: WithImplicitCoercion<string> | { [Symbol.toPrimitive](hint: "string"): string; }; }; }) => {
-        if (input.asOutput?.address) {
-          const inputAddress = Core.Address.fromBytes(Buffer.from(input.asOutput.address, 'base64').toString('hex') as Core.HexBlob);
-          const inputDelegationCred = inputAddress.getProps().delegationPart;
-          if (inputDelegationCred?.hash === delegationCred.hash) {
-            expect(inputDelegationCred?.hash).toBe(delegationCred.hash);
-          }
+    if (event.Tx.outputs && event.Tx.outputs.length > 0) {
+      // Check if any output has the correct delegation credential
+      const hasCorrectDelegationCred = event.Tx.outputs.some((output: cardano.TxOutput) => {
+        if (output.address) {
+          const outputAddress = Core.Address.fromBytes(Buffer.from(output.address).toString('hex') as Core.HexBlob);
+          const outputDelegationCred = outputAddress.getProps().delegationPart;
+          return outputDelegationCred?.hash === delegationCred.hash;
         }
+        return false;
       });
+      expect(hasCorrectDelegationCred).toBe(true);
     }
   });
 
@@ -851,15 +852,15 @@ describe("WatchClient", () => {
     // Verify the transaction involves the expected asset
     if (event.Tx.outputs && event.Tx.outputs.length > 0) {
       // Verify outputs contain the expected asset
-      event.Tx.outputs.forEach((output: { assets: any[]; }) => {
+      event.Tx.outputs.forEach((output: cardano.TxOutput) => {
         if (output.assets) {
           // Check that at least one asset group contains our policy ID and asset name
-          const hasExpectedAsset = output.assets.some((assetGroup: { policyId: any; assets: any[]; }) => {
+          const hasExpectedAsset = output.assets.some((assetGroup: cardano.Multiasset) => {
             const assetPolicyIdBase64 = Buffer.from(assetGroup.policyId).toString('base64');
             // Check if this policy ID matches
             if (assetPolicyIdBase64 === expectedPolicyIdBase64) {
               // Now check if any asset in this group has the expected name
-              return assetGroup.assets && assetGroup.assets.some((asset: { name: any; }) => {
+              return assetGroup.assets && assetGroup.assets.some((asset: cardano.Asset) => {
                 const assetNameBase64 = asset.name ? Buffer.from(asset.name).toString('base64') : '';
                 return assetNameBase64 === expectedAssetNameBase64;
               });
@@ -892,10 +893,10 @@ describe("WatchClient", () => {
     // Verify the transaction involves assets with the expected policy ID
     if (event.Tx.outputs && event.Tx.outputs.length > 0) {
       // Verify outputs contain assets with the searched policy ID
-      event.Tx.outputs.forEach((output: { assets: any[]; }) => {
+      event.Tx.outputs.forEach((output: cardano.TxOutput) => {
         if (output.assets) {
           // Check that at least one asset group has the expected policy ID
-          const hasExpectedPolicy = output.assets.some((assetGroup: { policyId: any; }) => {
+          const hasExpectedPolicy = output.assets.some((assetGroup: cardano.Multiasset) => {
             const assetPolicyIdBase64 = Buffer.from(assetGroup.policyId).toString('base64');
             return assetPolicyIdBase64 === expectedPolicyIdBase64;
           });
