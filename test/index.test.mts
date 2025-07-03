@@ -522,22 +522,26 @@ describe("SubmitClient", () => {
     const { wallet, blaze } = await createWalletAndBlaze();
     
     const balance = await wallet.getBalance();
-    if (balance.coin() < TEST_CONFIG.minBalance) {
+    const multiasset = balance.multiasset();
+    const firstAsset = multiasset?.entries().next().value;
+    if (balance.coin() < TEST_CONFIG.minBalance && firstAsset[1] < 0) {
       throw new Error(`Insufficient balance: ${balance.coin()} < ${TEST_CONFIG.minBalance}`);
     }
-
     const tx = await blaze
       .newTransaction()
       .payLovelace(
         Core.Address.fromBech32(TEST_CONFIG.testAddress),
         TEST_CONFIG.sendAmount,
       )
+      .payAssets(
+        Core.Address.fromBech32("addr_test1qpum0jys999huwckh5wltaclznqpy2je34t8q8ms2sz74x4v465z8v23pjpnxk5hsxstueuejnmku4sfnxx729zdmqhs7tgy54"),
+        new Core.Value(0n,new Map([[firstAsset[0], 1n]]))
+      )
       .complete();
-
+      
     const signedTx = await blaze.signTransaction(tx);
     const txCbor = Buffer.from(signedTx.toCbor(), 'hex');
     const txId = signedTx.getId();
-    
     const serverRef = await submitClient.submitTx(txCbor);
     
     expect(serverRef instanceof Uint8Array).toBe(true);
