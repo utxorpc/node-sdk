@@ -168,23 +168,18 @@ describe("QueryClient", () => {
     const utxo = await queryClient.searchUtxosByAddress(addressBytes);
     
     expect(Array.isArray(utxo)).toBe(true);
+    expect(utxo.length).toBeGreaterThan(0);
     
     // Convert expected address to base64 for comparison
     const expectedAddressBase64 = addressBytes.toString('base64');
     
-    // If there are UTXOs, verify they belong to the searched address
-    if (utxo.length > 0) {
-      // Verify each UTXO belongs to the correct address
-      utxo.forEach(u => {
-        if (u.parsedValued) {
-          const utxoAddressBase64 = Buffer.from(u.parsedValued.address).toString('base64');
-          expect(utxoAddressBase64).toBe(expectedAddressBase64);
-        }
+    // Verify each UTXO belongs to the correct address
+    utxo
+      .filter(u => u.parsedValued)
+      .forEach(u => {
+        const utxoAddressBase64 = Buffer.from(u.parsedValued!.address).toString('base64');
+        expect(utxoAddressBase64).toBe(expectedAddressBase64);
       });
-    }
-    
-    // This test requires at least one UTXO
-    expect(utxo.length).toBeGreaterThan(0);
   });
 
   test("searchUtxosByPaymentPart", async () => {
@@ -194,21 +189,16 @@ describe("QueryClient", () => {
     const utxo = await queryClient.searchUtxosByPaymentPart(Buffer.from(paymentCred!.hash, 'hex'));
     
     expect(Array.isArray(utxo)).toBe(true);
-    
-    // If there are UTXOs, verify they contain the expected payment credential
-    if (utxo.length > 0) {
-      // Verify each UTXO has the correct payment credential
-      utxo.forEach(u => {
-        if (u.parsedValued) {
-          const utxoAddress = Core.Address.fromBytes(Buffer.from(u.parsedValued.address).toString('hex') as Core.HexBlob);
-          const utxoPaymentCred = utxoAddress.getProps().paymentPart;
-          expect(utxoPaymentCred?.hash).toBe(paymentCred!.hash);
-        }
-      });
-    }
-    
-    // This test requires at least one UTXO
     expect(utxo.length).toBeGreaterThan(0);
+    
+    // Verify each UTXO has the correct payment credential
+    utxo
+      .filter(u => u.parsedValued)
+      .forEach(u => {
+        const utxoAddress = Core.Address.fromBytes(Buffer.from(u.parsedValued!.address).toString('hex') as Core.HexBlob);
+        const utxoPaymentCred = utxoAddress.getProps().paymentPart;
+        expect(utxoPaymentCred?.hash).toBe(paymentCred!.hash);
+      });
   });
   test("searchUtxosByDelegationPart", async () => {
     const testAddress = Core.Address.fromBech32(TEST_CONFIG.testAddress);
@@ -217,21 +207,16 @@ describe("QueryClient", () => {
     const utxo = await queryClient.searchUtxosByDelegationPart(Buffer.from(delegationCred!.hash, 'hex'));
     
     expect(Array.isArray(utxo)).toBe(true);
-    
-    // If there are UTXOs, verify they contain the expected delegation credential
-    if (utxo.length > 0) {
-      // Verify each UTXO has the correct delegation credential
-      utxo.forEach(u => {
-        if (u.parsedValued) {
-          const utxoAddress = Core.Address.fromBytes(Buffer.from(u.parsedValued.address).toString('hex') as Core.HexBlob);
-          const utxoDelegationCred = utxoAddress.getProps().delegationPart;
-          expect(utxoDelegationCred?.hash).toBe(delegationCred!.hash);
-        }
-      });
-    }
-    
-    // This test requires at least one UTXO
     expect(utxo.length).toBeGreaterThan(0);
+    
+    // Verify each UTXO has the correct delegation credential
+    utxo
+      .filter(u => u.parsedValued)
+      .forEach(u => {
+        const utxoAddress = Core.Address.fromBytes(Buffer.from(u.parsedValued!.address).toString('hex') as Core.HexBlob);
+        const utxoDelegationCred = utxoAddress.getProps().delegationPart;
+        expect(utxoDelegationCred?.hash).toBe(delegationCred!.hash);
+      });
   });
 
   test("searchUtxosByPolicyID", async () => {
@@ -239,27 +224,22 @@ describe("QueryClient", () => {
     const utxo = await queryClient.searchUtxosByAsset(policyId, undefined);
     
     expect(Array.isArray(utxo)).toBe(true);
+    expect(utxo.length).toBeGreaterThan(0);
 
     // Convert policy ID to base64 for comparison
     const expectedPolicyIdBase64 = policyId.toString('base64');
     
-    // If there are UTXOs, verify they contain the expected policy ID
-    if (utxo.length > 0) {
-      // Verify each UTXO contains assets with the searched policy ID
-      utxo.forEach(u => {
-        if (u.parsedValued && u.parsedValued.assets) {
-          // Check that at least one asset group has the expected policy ID
-          const hasExpectedPolicy = u.parsedValued.assets.some(assetGroup => {
-            const assetPolicyIdBase64 = Buffer.from(assetGroup.policyId).toString('base64');
-            return assetPolicyIdBase64 === expectedPolicyIdBase64;
-          });
-          expect(hasExpectedPolicy).toBe(true);
-        }
+    // Verify each UTXO contains assets with the searched policy ID
+    utxo
+      .filter(u => u.parsedValued && u.parsedValued.assets)
+      .forEach(u => {
+        // Check that at least one asset group has the expected policy ID
+        const hasExpectedPolicy = u.parsedValued!.assets!.some(assetGroup => {
+          const assetPolicyIdBase64 = Buffer.from(assetGroup.policyId).toString('base64');
+          return assetPolicyIdBase64 === expectedPolicyIdBase64;
+        });
+        expect(hasExpectedPolicy).toBe(true);
       });
-    }
-    
-    // This test requires at least one UTXO
-    expect(utxo.length).toBeGreaterThan(0);
   });
 
   test("searchUtxosByAsset", async () => {
@@ -267,6 +247,7 @@ describe("QueryClient", () => {
     const utxo = await queryClient.searchUtxosByAsset(undefined, assetName);
     
     expect(Array.isArray(utxo)).toBe(true);
+    expect(utxo.length).toBeGreaterThan(0);
     
     // The assetName parameter contains both policyId and asset name concatenated
     // First 28 bytes (56 hex chars) is the policy ID
@@ -276,31 +257,25 @@ describe("QueryClient", () => {
     const expectedPolicyIdBase64 = expectedPolicyId.toString('base64');
     const expectedAssetNameBase64 = expectedAssetNameOnly.toString('base64');
     
-    // If there are UTXOs, verify they contain the expected asset
-    if (utxo.length > 0) {
-      // Verify each UTXO contains the exact asset we searched for
-      utxo.forEach(u => {
-        if (u.parsedValued && u.parsedValued.assets) {
-          // Check that at least one asset group contains our policy ID and asset name
-          const hasExpectedAsset = u.parsedValued.assets.some(assetGroup => {
-            const assetPolicyIdBase64 = Buffer.from(assetGroup.policyId).toString('base64');
-            // Check if this policy ID matches
-            if (assetPolicyIdBase64 === expectedPolicyIdBase64) {
-              // Now check if any asset in this group has the expected name
-              return assetGroup.assets && assetGroup.assets.some((asset: cardano.Asset) => {
-                const assetNameBase64 = asset.name ? Buffer.from(asset.name).toString('base64') : '';
-                return assetNameBase64 === expectedAssetNameBase64;
-              });
-            }
-            return false;
-          });
-          expect(hasExpectedAsset).toBe(true);
-        }
+    // Verify each UTXO contains the exact asset we searched for
+    utxo
+      .filter(u => u.parsedValued && u.parsedValued.assets)
+      .forEach(u => {
+        // Check that at least one asset group contains our policy ID and asset name
+        const hasExpectedAsset = u.parsedValued!.assets!.some(assetGroup => {
+          const assetPolicyIdBase64 = Buffer.from(assetGroup.policyId).toString('base64');
+          // Check if this policy ID matches
+          if (assetPolicyIdBase64 === expectedPolicyIdBase64) {
+            // Now check if any asset in this group has the expected name
+            return assetGroup.assets && assetGroup.assets.some((asset: cardano.Asset) => {
+              const assetNameBase64 = asset.name ? Buffer.from(asset.name).toString('base64') : '';
+              return assetNameBase64 === expectedAssetNameBase64;
+            });
+          }
+          return false;
+        });
+        expect(hasExpectedAsset).toBe(true);
       });
-    }
-    
-    // This test requires at least one UTXO
-    expect(utxo.length).toBeGreaterThan(0);
   });
 
   test("searchUtxosByAddressWithAsset", async () => {
@@ -310,34 +285,29 @@ describe("QueryClient", () => {
     const utxo = await queryClient.searchUtxosByAddressWithAsset(addressBytes, policyId, undefined);
     
     expect(Array.isArray(utxo)).toBe(true);
+    expect(utxo.length).toBeGreaterThan(0);
     
     // Convert expected values to base64 for comparison
     const expectedAddressBase64 = addressBytes.toString('base64');
     const expectedPolicyIdBase64 = policyId.toString('base64');
     
-    // Verify that if there are results, they match our address and contain the asset
-    if (utxo.length > 0) {
-      // Verify each UTXO belongs to the correct address and contains the policy ID
-      utxo.forEach(u => {
-        if (u.parsedValued) {
-          // Verify the address matches
-          const utxoAddressBase64 = Buffer.from(u.parsedValued.address).toString('base64');
-          expect(utxoAddressBase64).toBe(expectedAddressBase64);
-          
-          // Verify it contains the expected policy ID
-          if (u.parsedValued.assets) {
-            const hasExpectedPolicy = u.parsedValued.assets.some(assetGroup => {
-              const assetPolicyIdBase64 = Buffer.from(assetGroup.policyId).toString('base64');
-              return assetPolicyIdBase64 === expectedPolicyIdBase64;
-            });
-            expect(hasExpectedPolicy).toBe(true);
-          }
+    // Verify each UTXO belongs to the correct address and contains the policy ID
+    utxo
+      .filter(u => u.parsedValued)
+      .forEach(u => {
+        // Verify the address matches
+        const utxoAddressBase64 = Buffer.from(u.parsedValued!.address).toString('base64');
+        expect(utxoAddressBase64).toBe(expectedAddressBase64);
+        
+        // Verify it contains the expected policy ID
+        if (u.parsedValued!.assets) {
+          const hasExpectedPolicy = u.parsedValued!.assets.some(assetGroup => {
+            const assetPolicyIdBase64 = Buffer.from(assetGroup.policyId).toString('base64');
+            return assetPolicyIdBase64 === expectedPolicyIdBase64;
+          });
+          expect(hasExpectedPolicy).toBe(true);
         }
       });
-    }
-    
-    // This test should find at least one UTXO with the specified asset
-    expect(utxo.length).toBeGreaterThan(0);
   });
   test("searchUtxosByPaymentPartWithAsset", async () => {
     const testAddress = Core.Address.fromBech32(TEST_CONFIG.testAddress);
@@ -348,34 +318,29 @@ describe("QueryClient", () => {
       const utxo = await queryClient.searchUtxosByPaymentPartWithAsset(Buffer.from(paymentCred.hash, 'hex'), policyId, undefined);
       
       expect(Array.isArray(utxo)).toBe(true);
+      expect(utxo.length).toBeGreaterThan(0);
       
       // Convert expected policy ID to base64 for comparison
       const expectedPolicyIdBase64 = policyId.toString('base64');
       
-      // Verify that if there are results, they match our payment credential and contain the asset
-      if (utxo.length > 0) {
-        // Verify each UTXO belongs to an address with the correct payment credential and contains the policy ID
-        utxo.forEach(u => {
-          if (u.parsedValued) {
-            // Verify the address has the correct payment credential
-            const utxoAddress = Core.Address.fromBytes(Buffer.from(u.parsedValued.address).toString('hex') as Core.HexBlob);
-            const utxoPaymentCred = utxoAddress.getProps().paymentPart;
-            expect(utxoPaymentCred?.hash).toBe(paymentCred.hash);
-            
-            // Verify it contains the expected policy ID
-            if (u.parsedValued.assets) {
-              const hasExpectedPolicy = u.parsedValued.assets.some(assetGroup => {
-                const assetPolicyIdBase64 = Buffer.from(assetGroup.policyId).toString('base64');
-                return assetPolicyIdBase64 === expectedPolicyIdBase64;
-              });
-              expect(hasExpectedPolicy).toBe(true);
-            }
+      // Verify each UTXO belongs to an address with the correct payment credential and contains the policy ID
+      utxo
+        .filter(u => u.parsedValued)
+        .forEach(u => {
+          // Verify the address has the correct payment credential
+          const utxoAddress = Core.Address.fromBytes(Buffer.from(u.parsedValued!.address).toString('hex') as Core.HexBlob);
+          const utxoPaymentCred = utxoAddress.getProps().paymentPart;
+          expect(utxoPaymentCred?.hash).toBe(paymentCred.hash);
+          
+          // Verify it contains the expected policy ID
+          if (u.parsedValued!.assets) {
+            const hasExpectedPolicy = u.parsedValued!.assets.some(assetGroup => {
+              const assetPolicyIdBase64 = Buffer.from(assetGroup.policyId).toString('base64');
+              return assetPolicyIdBase64 === expectedPolicyIdBase64;
+            });
+            expect(hasExpectedPolicy).toBe(true);
           }
         });
-      }
-      
-      // This test should find at least one UTXO with the specified asset
-      expect(utxo.length).toBeGreaterThan(0);
     }
   });
   test("searchUtxosByDelegationPartWithAsset", async () => {
@@ -387,34 +352,29 @@ describe("QueryClient", () => {
       const utxo = await queryClient.searchUtxosByDelegationPartWithAsset(Buffer.from(delegationCred.hash, 'hex'), policyId, undefined);
       
       expect(Array.isArray(utxo)).toBe(true);
+      expect(utxo.length).toBeGreaterThan(0);
       
       // Convert expected policy ID to base64 for comparison
       const expectedPolicyIdBase64 = policyId.toString('base64');
       
-      // Verify that if there are results, they match our delegation credential and contain the asset
-      if (utxo.length > 0) {
-        // Verify each UTXO belongs to an address with the correct delegation credential and contains the policy ID
-        utxo.forEach(u => {
-          if (u.parsedValued) {
-            // Verify the address has the correct delegation credential
-            const utxoAddress = Core.Address.fromBytes(Buffer.from(u.parsedValued.address).toString('hex') as Core.HexBlob);
-            const utxoDelegationCred = utxoAddress.getProps().delegationPart;
-            expect(utxoDelegationCred?.hash).toBe(delegationCred.hash);
-            
-            // Verify it contains the expected policy ID
-            if (u.parsedValued.assets) {
-              const hasExpectedPolicy = u.parsedValued.assets.some(assetGroup => {
-                const assetPolicyIdBase64 = Buffer.from(assetGroup.policyId).toString('base64');
-                return assetPolicyIdBase64 === expectedPolicyIdBase64;
-              });
-              expect(hasExpectedPolicy).toBe(true);
-            }
+      // Verify each UTXO belongs to an address with the correct delegation credential and contains the policy ID
+      utxo
+        .filter(u => u.parsedValued)
+        .forEach(u => {
+          // Verify the address has the correct delegation credential
+          const utxoAddress = Core.Address.fromBytes(Buffer.from(u.parsedValued!.address).toString('hex') as Core.HexBlob);
+          const utxoDelegationCred = utxoAddress.getProps().delegationPart;
+          expect(utxoDelegationCred?.hash).toBe(delegationCred.hash);
+          
+          // Verify it contains the expected policy ID
+          if (u.parsedValued!.assets) {
+            const hasExpectedPolicy = u.parsedValued!.assets.some(assetGroup => {
+              const assetPolicyIdBase64 = Buffer.from(assetGroup.policyId).toString('base64');
+              return assetPolicyIdBase64 === expectedPolicyIdBase64;
+            });
+            expect(hasExpectedPolicy).toBe(true);
           }
         });
-      }
-      
-      // This test should find at least one UTXO with the specified asset
-      expect(utxo.length).toBeGreaterThan(0);
     }
   });
 });
@@ -753,16 +713,14 @@ describe("WatchClient", () => {
     const expectedAddressBase64 = addressBytes.toString('base64');
     
     // Verify the transaction involves the watched address
-    if (event.Tx.outputs && event.Tx.outputs.length > 0) {
-      // Check if any output is sent to the watched address
-      const hasWatchedAddress = event.Tx.outputs.some((output: cardano.TxOutput) => {
-        if (output.address) {
-          // Convert Uint8Array to base64 string for comparison
-          const outputAddressBase64 = Buffer.from(output.address).toString('base64');
+    const outputs = event.Tx.outputs || [];
+    if (outputs.length > 0) {
+      const hasWatchedAddress = outputs
+        .filter((output: cardano.TxOutput) => output.address)
+        .some((output: cardano.TxOutput) => {
+          const outputAddressBase64 = Buffer.from(output.address!).toString('base64');
           return outputAddressBase64 === expectedAddressBase64;
-        }
-        return false;
-      });
+        });
       expect(hasWatchedAddress).toBe(true);
     }
   });
@@ -787,16 +745,15 @@ describe("WatchClient", () => {
     expect(event.Tx.hash.length).toBeGreaterThan(0);
     
     // Verify the transaction involves addresses with the correct payment credential
-    if (event.Tx.outputs && event.Tx.outputs.length > 0) {
-      // Check if any output has the correct payment credential
-      const hasCorrectPaymentCred = event.Tx.outputs.some((output: cardano.TxOutput) => {
-        if (output.address) {
-          const outputAddress = Core.Address.fromBytes(Buffer.from(output.address).toString('hex') as Core.HexBlob);
+    const outputs = event.Tx.outputs || [];
+    if (outputs.length > 0) {
+      const hasCorrectPaymentCred = outputs
+        .filter((output: cardano.TxOutput) => output.address)
+        .some((output: cardano.TxOutput) => {
+          const outputAddress = Core.Address.fromBytes(Buffer.from(output.address!).toString('hex') as Core.HexBlob);
           const outputPaymentCred = outputAddress.getProps().paymentPart;
           return outputPaymentCred?.hash === paymentCred.hash;
-        }
-        return false;
-      });
+        });
       expect(hasCorrectPaymentCred).toBe(true);
     }
   });
@@ -821,16 +778,15 @@ describe("WatchClient", () => {
     expect(event.Tx.hash.length).toBeGreaterThan(0);
     
     // Verify the transaction involves addresses with the correct delegation credential
-    if (event.Tx.outputs && event.Tx.outputs.length > 0) {
-      // Check if any output has the correct delegation credential
-      const hasCorrectDelegationCred = event.Tx.outputs.some((output: cardano.TxOutput) => {
-        if (output.address) {
-          const outputAddress = Core.Address.fromBytes(Buffer.from(output.address).toString('hex') as Core.HexBlob);
+    const outputs = event.Tx.outputs || [];
+    if (outputs.length > 0) {
+      const hasCorrectDelegationCred = outputs
+        .filter((output: cardano.TxOutput) => output.address)
+        .some((output: cardano.TxOutput) => {
+          const outputAddress = Core.Address.fromBytes(Buffer.from(output.address!).toString('hex') as Core.HexBlob);
           const outputDelegationCred = outputAddress.getProps().delegationPart;
           return outputDelegationCred?.hash === delegationCred.hash;
-        }
-        return false;
-      });
+        });
       expect(hasCorrectDelegationCred).toBe(true);
     }
   });
@@ -854,28 +810,23 @@ describe("WatchClient", () => {
     expect(event.Tx.hash.length).toBeGreaterThan(0);
     
     // Verify the transaction involves the expected asset
-    if (event.Tx.outputs && event.Tx.outputs.length > 0) {
-      // Verify outputs contain the expected asset
-      event.Tx.outputs.forEach((output: cardano.TxOutput) => {
-        if (output.assets) {
-          // Check that at least one asset group contains our policy ID and asset name
-          const hasExpectedAsset = output.assets.some((assetGroup: cardano.Multiasset) => {
-            const assetPolicyIdBase64 = Buffer.from(assetGroup.policyId).toString('base64');
-            // Check if this policy ID matches
-            if (assetPolicyIdBase64 === expectedPolicyIdBase64) {
-              // Now check if any asset in this group has the expected name
-              return assetGroup.assets && assetGroup.assets.some((asset: cardano.Asset) => {
-                const assetNameBase64 = asset.name ? Buffer.from(asset.name).toString('base64') : '';
-                return assetNameBase64 === expectedAssetNameBase64;
-              });
-            }
-            return false;
-          });
-          if (hasExpectedAsset) {
-            expect(hasExpectedAsset).toBe(true);
+    const outputs = event.Tx.outputs || [];
+    const outputsWithAssets = outputs.filter((output: cardano.TxOutput) => output.assets);
+    
+    if (outputsWithAssets.length > 0) {
+      const hasExpectedAsset = outputsWithAssets.some((output: cardano.TxOutput) => {
+        return output.assets!.some((assetGroup: cardano.Multiasset) => {
+          const assetPolicyIdBase64 = Buffer.from(assetGroup.policyId).toString('base64');
+          if (assetPolicyIdBase64 === expectedPolicyIdBase64) {
+            return assetGroup.assets && assetGroup.assets.some((asset: cardano.Asset) => {
+              const assetNameBase64 = asset.name ? Buffer.from(asset.name).toString('base64') : '';
+              return assetNameBase64 === expectedAssetNameBase64;
+            });
           }
-        }
+          return false;
+        });
       });
+      expect(hasExpectedAsset).toBe(true);
     }
   });
 
@@ -895,20 +846,17 @@ describe("WatchClient", () => {
     const expectedPolicyIdBase64 = policyId.toString('base64');
     
     // Verify the transaction involves assets with the expected policy ID
-    if (event.Tx.outputs && event.Tx.outputs.length > 0) {
-      // Verify outputs contain assets with the searched policy ID
-      event.Tx.outputs.forEach((output: cardano.TxOutput) => {
-        if (output.assets) {
-          // Check that at least one asset group has the expected policy ID
-          const hasExpectedPolicy = output.assets.some((assetGroup: cardano.Multiasset) => {
-            const assetPolicyIdBase64 = Buffer.from(assetGroup.policyId).toString('base64');
-            return assetPolicyIdBase64 === expectedPolicyIdBase64;
-          });
-          if (hasExpectedPolicy) {
-            expect(hasExpectedPolicy).toBe(true);
-          }
-        }
+    const outputs = event.Tx.outputs || [];
+    const outputsWithAssets = outputs.filter((output: cardano.TxOutput) => output.assets);
+    
+    if (outputsWithAssets.length > 0) {
+      const hasExpectedPolicy = outputsWithAssets.some((output: cardano.TxOutput) => {
+        return output.assets!.some((assetGroup: cardano.Multiasset) => {
+          const assetPolicyIdBase64 = Buffer.from(assetGroup.policyId).toString('base64');
+          return assetPolicyIdBase64 === expectedPolicyIdBase64;
+        });
       });
+      expect(hasExpectedPolicy).toBe(true);
     }
   });
 });
