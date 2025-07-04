@@ -27,11 +27,11 @@
   },
   "homepage": "https://github.com/utxorpc/node-sdk#readme",
   "devDependencies": {
-    "@types/node": "22.10.2",
-    "tsup": "^8.2.4",
-    "tsx": "4.19.0",
-    "typescript": "5.5.4",
-    "vitest": "^2.1.8"
+    "@types/node": "22.15.33",
+    "tsup": "^8.5.0",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
   },
   "dependencies": {
     "@connectrpc/connect": "1.4",
