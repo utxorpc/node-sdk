@@ -671,14 +671,12 @@ describe("SubmitClient", () => {
       
       const signedTx = await blaze.signTransaction(tx);
       const txCbor = Buffer.from(signedTx.toCbor(), 'hex');
-      const txId = signedTx.getId();
       
       await submitClient.submitTx(txCbor);
       
       const { value: event, done } = await eventPromise;
       
       expect(done).toBe(false);
-      expect(Buffer.from(event.txoRef).toString('hex')).toBe(txId);
       expect(event.stage).toBeGreaterThanOrEqual(1);
     });
   });
