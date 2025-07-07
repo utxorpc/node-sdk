@@ -390,8 +390,8 @@ describe("SyncClient", () => {
   });
   test("followTip", async () => {
     const generator = syncClient.followTip([{
-      slot: 84194200,
-      hash: '6d1b288746ce3be63dcf68af9783282a0795c4d22eda4f5daef195f6034ccfc4'
+      slot: 85213090,
+      hash: 'e50842b1cc3ac813cb88d1533c3dea0f92e0ea945f53487c1d960c2210d0c3ba'
     }]);
     const iterator = generator[Symbol.asyncIterator]();
     
@@ -400,8 +400,8 @@ describe("SyncClient", () => {
       value: {
         action: 'reset',
         point: {
-          slot: '84194200',
-          hash: '6d1b288746ce3be63dcf68af9783282a0795c4d22eda4f5daef195f6034ccfc4'
+          slot: '85213090',
+          hash: 'e50842b1cc3ac813cb88d1533c3dea0f92e0ea945f53487c1d960c2210d0c3ba'
         }
       },
       done: false
@@ -412,13 +412,11 @@ describe("SyncClient", () => {
       body: block2.value?.block?.body?.toJson(), 
       header: block2.value?.block?.header?.toJson() 
     }).toEqual({
-      body: {
-        tx: expect.any(Array)
-      },
+      body: {},
       header: {
-        slot: "84194236",
-        hash: "YnWDAE3Iqov4xIvPAwBwxxKwhIOUOlTNWReYzsil+bA=",
-        height: "3363968"
+        slot: "85213091",
+        hash: "z+5FxksoOqfaeYHIl0oIaLvwPVJfBKiOQrVCl4JtiLE=",
+        height: "3399487"
       }
     });
   });
@@ -432,8 +430,8 @@ describe("SyncClient", () => {
   });
   test("fetchBlock", async () => {
     const block = await syncClient.fetchBlock({
-      slot: 84194200,
-      hash: '6d1b288746ce3be63dcf68af9783282a0795c4d22eda4f5daef195f6034ccfc4',
+      slot: 85213090,
+      hash: 'e50842b1cc3ac813cb88d1533c3dea0f92e0ea945f53487c1d960c2210d0c3ba',
     });
     
     expect({ 
@@ -442,16 +440,16 @@ describe("SyncClient", () => {
     }).toEqual({
       body: {},
       header: {
-        slot: "84194200",
-        hash: "bRsoh0bOO+Y9z2ivl4MoKgeVxNIu2k9drvGV9gNMz8Q=",
-        height: "3363967"
+        slot: "85213090",
+        hash: "5QhCscw6yBPLiNFTPD3qD5Lg6pRfU0h8HZYMIhDQw7o=",
+        height: "3399486"
       }
     });
   });
   test("fetchHistory", async () => {
     const block = await syncClient.fetchHistory({
-      slot: 84194200,
-      hash: '6d1b288746ce3be63dcf68af9783282a0795c4d22eda4f5daef195f6034ccfc4',
+      slot: 85213090,
+      hash: 'e50842b1cc3ac813cb88d1533c3dea0f92e0ea945f53487c1d960c2210d0c3ba',
     });
     
     expect({ 
@@ -460,9 +458,9 @@ describe("SyncClient", () => {
     }).toEqual({
       body: {},
       header: {
-        slot: "84194200",
-        hash: "bRsoh0bOO+Y9z2ivl4MoKgeVxNIu2k9drvGV9gNMz8Q=",
-        height: "3363967"
+        slot: "85213090",
+        hash: "5QhCscw6yBPLiNFTPD3qD5Lg6pRfU0h8HZYMIhDQw7o=",
+        height: "3399486"
       }
     });
   });
