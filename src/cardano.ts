@@ -34,6 +34,10 @@ export type TxEvent = GenericTxEvent<cardano.Tx>;
 export type MempoolEvent = GenericTxInMempoolEvent<cardano.Tx>;
 export type TxHash = Uint8Array;
 export type TxCbor = Uint8Array;
+export type Block = {
+  parsedBlock: cardano.Block;
+  nativeBytes: Uint8Array;
+};
 
 function toMempoolEvent(txInMempool: submit.TxInMempool): MempoolEvent {
   return {
@@ -58,6 +62,16 @@ function toTxEvent(response: watch.WatchTxResponse): TxEvent {
 
 function anyChainToBlock(msg: sync.AnyChainBlock) {
   return msg.chain.case == "cardano" ? msg.chain.value : null;
+}
+
+function anyChainToBlockWithBytes(msg: sync.AnyChainBlock): Block | null {
+  if (msg.chain.case == "cardano") {
+    return {
+      parsedBlock: msg.chain.value,
+      nativeBytes: msg.nativeBytes
+    };
+  }
+  return null;
 }
 
 function pointToBlockRef(p: ChainPoint) {
@@ -146,13 +160,13 @@ export class SyncClient {
     return blockRefToPoint(res.tip!);
   }
 
-  async fetchBlock(p: ChainPoint): Promise<cardano.Block> {
+  async fetchBlock(p: ChainPoint): Promise<Block> {
     const req = pointToBlockRef(p);
     const res = await this.inner.fetchBlock({ ref: [req] });
-    return anyChainToBlock(res.block[0])!;
+    return anyChainToBlockWithBytes(res.block[0])!;
   }
 
-  async fetchHistory(p: ChainPoint | undefined, maxItems = 1): Promise<cardano.Block> {
+  async fetchHistory(p: ChainPoint | undefined, maxItems = 1): Promise<Block[]> {
     const req = new sync.DumpHistoryRequest({
       startToken: p ? new sync.BlockRef({
         index: BigInt(p.slot),
@@ -167,9 +181,9 @@ export class SyncClient {
       throw new Error("No block history found for the provided ChainPoint.");
     }
 
-    const block = anyChainToBlock(res.block[0]);
-
-    return block!;
+    return res.block
+      .map(anyChainToBlockWithBytes)
+      .filter((block): block is Block => block !== null);
   }
 }
 
