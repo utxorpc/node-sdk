@@ -76,14 +76,14 @@ function anyChainToBlockWithBytes(msg: sync.AnyChainBlock): Block | null {
 
 function pointToBlockRef(p: ChainPoint) {
   return new sync.BlockRef({
-    index: BigInt(p.slot),
+    slot: BigInt(p.slot),
     hash: new Uint8Array(Buffer.from(p.hash, "hex")),
   });
 }
 
 function blockRefToPoint(r: sync.BlockRef) {
   return {
-    slot: r.index.toString(),
+    slot: r.slot.toString(),
     hash: Buffer.from(r.hash).toString("hex"),
   };
 }
@@ -169,7 +169,7 @@ export class SyncClient {
   async fetchHistory(p: ChainPoint | undefined, maxItems = 1): Promise<Block[]> {
     const req = new sync.DumpHistoryRequest({
       startToken: p ? new sync.BlockRef({
-        index: BigInt(p.slot),
+        slot: BigInt(p.slot),
         hash: Buffer.from(p.hash, "hex"),
       }) : undefined,
       maxItems: maxItems,
@@ -306,6 +306,26 @@ export class QueryClient {
       },
       asset: (policyId && name) ? { policyId: policyId, assetName: name } : policyId ? { policyId } : { assetName: name },
     });
+  }
+
+  async readGenesis(): Promise<cardano.Genesis> {
+    const res = await this.inner.readGenesis({});
+    
+    if (!res.config || res.config.case !== "cardano") {
+      throw new Error("Genesis config is not Cardano data");
+    }
+    
+    return res.config.value;
+  }
+
+  async readErasummary(): Promise<cardano.EraSummary[]> {
+    const res = await this.inner.readEraSummary({});
+    
+    if (!res.summary || res.summary.case !== "cardano") {
+      throw new Error("Era summary is not Cardano data");
+    }
+    
+    return res.summary.value.summaries;
   }
 }
 
