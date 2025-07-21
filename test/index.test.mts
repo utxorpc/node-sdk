@@ -429,14 +429,17 @@ describe("SyncClient", () => {
     expect(tip.hash.length).toBeGreaterThan(0);
   });
   test("fetchBlock", async () => {
-    const block = await syncClient.fetchBlock({
+    const blockWithBytes = await syncClient.fetchBlock({
       slot: 85213090,
       hash: 'e50842b1cc3ac813cb88d1533c3dea0f92e0ea945f53487c1d960c2210d0c3ba',
     });
     
+    expect(blockWithBytes.nativeBytes).toBeInstanceOf(Uint8Array);
+    expect(blockWithBytes.nativeBytes.length).toBeGreaterThan(0);
+    
     expect({ 
-      body: block.body?.toJson(), 
-      header: block.header?.toJson() 
+      body: blockWithBytes.parsedBlock.body?.toJson(), 
+      header: blockWithBytes.parsedBlock.header?.toJson() 
     }).toEqual({
       body: {},
       header: {
@@ -447,14 +450,21 @@ describe("SyncClient", () => {
     });
   });
   test("fetchHistory", async () => {
-    const block = await syncClient.fetchHistory({
+    const blocks = await syncClient.fetchHistory({
       slot: 85213090,
       hash: 'e50842b1cc3ac813cb88d1533c3dea0f92e0ea945f53487c1d960c2210d0c3ba',
-    });
+    }, 1);
+    
+    expect(Array.isArray(blocks)).toBe(true);
+    expect(blocks.length).toBe(1);
+    
+    const firstBlock = blocks[0];
+    expect(firstBlock.nativeBytes).toBeInstanceOf(Uint8Array);
+    expect(firstBlock.nativeBytes.length).toBeGreaterThan(0);
     
     expect({ 
-      body: block.body?.toJson(), 
-      header: block.header?.toJson() 
+      body: firstBlock.parsedBlock.body?.toJson(), 
+      header: firstBlock.parsedBlock.header?.toJson() 
     }).toEqual({
       body: {},
       header: {
