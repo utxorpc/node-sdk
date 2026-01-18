@@ -8,6 +8,7 @@ export {
   Utxo as CardanoUtxo,
   TipEvent as CardanoTipEvent,
   TxEvent as CardanoTxEvent,
+  TxPredicate as CardanoTxPredicate,
   MempoolEvent as CardanoMempoolEvent,
   TxHash as CardanoTxHash,
   TxCbor as CardanoTxCbor,
@@ -16,6 +17,7 @@ export type {
   ClientBuilderOptions,
   GenericTipEvent,
   GenericTxEvent,
+  GenericTxPredicate,
   GenericTxInMempoolEvent,
   GenericUtxo,
 } from "./common.js";

@@ -24,6 +24,7 @@ import {
   GenericUtxo,
   GenericTxEvent,
   GenericTxInMempoolEvent,
+  GenericTxPredicate,
   metadataInterceptor,
 } from "./common.js";
 
@@ -31,6 +32,7 @@ export type ChainPoint = { slot: number | string; hash: string };
 export type Utxo = GenericUtxo<query.TxoRef, cardano.TxOutput>;
 export type TipEvent = GenericTipEvent<cardano.Block, ChainPoint>;
 export type TxEvent = GenericTxEvent<cardano.Tx, watch.BlockRef>;
+export type TxPredicate = GenericTxPredicate<cardano.TxPattern>;
 export type MempoolEvent = GenericTxInMempoolEvent<cardano.Tx>;
 export type TxHash = Uint8Array;
 export type TxCbor = Uint8Array;
@@ -69,6 +71,20 @@ function toTxEvent(response: watch.WatchTxResponse): TxEvent {
     default:
       throw new Error("Unrecognized TX event");
   }
+}
+
+function toTxPredicate(predicate: TxPredicate): watch.TxPredicate {
+  return new watch.TxPredicate({
+    match: predicate.match ? new watch.AnyChainTxPattern({
+      chain: {
+        case: "cardano",
+        value: predicate.match,
+      }
+    }) : undefined,
+    not: predicate.not?.map(toTxPredicate),
+    allOf: predicate.allOf?.map(toTxPredicate),
+    anyOf: predicate.anyOf?.map(toTxPredicate),
+  });
 }
 
 function anyChainToBlock(msg: sync.AnyChainBlock) {
@@ -430,7 +446,7 @@ export class SubmitClient {
     assetName?: Uint8Array<ArrayBuffer>
   ): AsyncIterable<MempoolEvent> {
     yield* this.watchMempoolByMatch({
-      movesAsset: policyId ? { policyId } : { assetName },
+      movesAsset: { policyId, assetName },
     });
   }
 }
@@ -450,20 +466,13 @@ export class WatchClient {
     this.inner = createPromiseClient(watchConnect.WatchService, transport);
   }
 
-  async *watchTxByMatch(
-    pattern: PartialMessage<cardano.TxPattern>,
+  async *watchTxByPredicate(
+    predicate: TxPredicate,
     intersect?: ChainPoint[]
   ): AsyncIterable<TxEvent> {
     const request: watch.WatchTxRequest = new watch.WatchTxRequest({
       intersect: intersect ? intersect.map(pointToBlockRef) : [],
-      predicate: {
-        match: {
-          chain: {
-            value: pattern,
-            case: "cardano",
-          },
-        },
-      },
+      predicate: toTxPredicate(predicate),
     });
 
     const stream = this.inner.watchTx(request);
@@ -471,6 +480,14 @@ export class WatchClient {
     for await (const response of stream) {
       yield toTxEvent(response);
     }
+  }
+
+  async *watchTxByMatch(
+    pattern: PartialMessage<cardano.TxPattern>,
+    intersect?: ChainPoint[]
+  ): AsyncIterable<TxEvent> {
+    const predicate = { match: pattern }
+    yield* this.watchTxByPredicate(predicate, intersect);
   }
 
   async *watchTx(intersect?: ChainPoint[]): AsyncIterable<TxEvent> {
