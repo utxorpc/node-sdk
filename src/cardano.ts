@@ -30,7 +30,7 @@ import {
 export type ChainPoint = { slot: number | string; hash: string };
 export type Utxo = GenericUtxo<query.TxoRef, cardano.TxOutput>;
 export type TipEvent = GenericTipEvent<cardano.Block, ChainPoint>;
-export type TxEvent = GenericTxEvent<cardano.Tx>;
+export type TxEvent = GenericTxEvent<cardano.Tx, watch.BlockRef>;
 export type MempoolEvent = GenericTxInMempoolEvent<cardano.Tx>;
 export type TxHash = Uint8Array;
 export type TxCbor = Uint8Array;
@@ -51,13 +51,24 @@ function toMempoolEvent(txInMempool: submit.TxInMempool): MempoolEvent {
   };
 }
 function toTxEvent(response: watch.WatchTxResponse): TxEvent {
-  return {
-    action: response.action.case as "apply" | "undo",
-    Tx:
-      response.action.value?.chain.case == "cardano"
-        ? response.action.value?.chain.value
-        : undefined,
-  };
+  switch (response.action.case) {
+    case "apply":
+    case "undo":
+      if (response.action.value.chain.case !== "cardano") {
+        throw new Error(`Unexpected chain response (expected "cardano", saw "${response.action.value.chain.case}")`);
+      }
+      return {
+        action: response.action.case,
+        Tx: response.action.value.chain.value,
+      }
+    case "idle":
+      return {
+        action: "idle",
+        BlockRef: response.action.value,
+      }
+    default:
+      throw new Error("Unrecognized TX event");
+  }
 }
 
 function anyChainToBlock(msg: sync.AnyChainBlock) {
@@ -346,15 +357,15 @@ export class SubmitClient {
 
   async submitTx(tx: TxCbor): Promise<TxHash> {
     const res = await this.inner.submitTx({
-      tx: [tx].map((cbor) => ({ type: { case: "raw", value: cbor } })),
+      tx: { type: { case: "raw", value: tx } },
     });
 
-    return res.ref[0];
+    return res.ref;
   }
 
   async evalTx(tx: TxCbor): Promise<submit.EvalTxResponse> {
     const res = await this.inner.evalTx({
-      tx: [tx].map((cbor) => ({ type: { case: "raw", value: cbor } })),
+      tx: { type: { case: "raw", value: tx } },
     });
     
     return res;
@@ -458,15 +469,7 @@ export class WatchClient {
     const stream = this.inner.watchTx(request);
 
     for await (const response of stream) {
-      switch (response.action.case) {
-        case "apply":
-          yield toTxEvent(response);
-          break;
-
-        case "undo":
-          yield toTxEvent(response);
-          break;
-      }
+      yield toTxEvent(response);
     }
   }
 
@@ -504,9 +507,7 @@ export class WatchClient {
     assetName?: Uint8Array<ArrayBuffer>,
     intersect?: ChainPoint[]
   ): AsyncIterable<TxEvent> {
-    const pattern = policyId
-      ? { movesAsset: { policyId } }
-      : { movesAsset: { assetName } };
+    const pattern = { movesAsset: { policyId, assetName } };
     yield* this.watchTxByMatch(pattern, intersect);
   }
 }

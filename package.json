@@ -37,7 +37,7 @@
     "@connectrpc/connect": "1.4",
     "@connectrpc/connect-node": "1.4",
     "@connectrpc/connect-web": "1.4",
-    "@utxorpc/spec": "0.17.0",
+    "@utxorpc/spec": "0.18.1",
     "buffer": "^6.0.3"
   },
   "exports": {
