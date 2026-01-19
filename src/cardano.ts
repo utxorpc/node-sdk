@@ -31,7 +31,7 @@ import {
 export type ChainPoint = { slot: number | string; hash: string };
 export type Utxo = GenericUtxo<query.TxoRef, cardano.TxOutput>;
 export type TipEvent = GenericTipEvent<cardano.Block, ChainPoint>;
-export type TxEvent = GenericTxEvent<cardano.Tx, watch.BlockRef>;
+export type TxEvent = GenericTxEvent<cardano.Tx, cardano.Block, watch.BlockRef>;
 export type TxPredicate = GenericTxPredicate<cardano.TxPattern>;
 export type MempoolEvent = GenericTxInMempoolEvent<cardano.Tx>;
 export type TxHash = Uint8Array;
@@ -57,11 +57,15 @@ function toTxEvent(response: watch.WatchTxResponse): TxEvent {
     case "apply":
     case "undo":
       if (response.action.value.chain.case !== "cardano") {
-        throw new Error(`Unexpected chain response (expected "cardano", saw "${response.action.value.chain.case}")`);
+        throw new Error(`Unexpected tx chain response (expected "cardano", saw "${response.action.value.chain.case}")`);
+      }
+      if (response.action.value.block?.chain?.case !== "cardano") {
+        throw new Error(`Unexpected block chain response (expected "cardano", saw "${response.action.value.block?.chain?.case ?? "<none>"}")`);
       }
       return {
         action: response.action.case,
         Tx: response.action.value.chain.value,
+        Block: response.action.value.block.chain.value,
       }
     case "idle":
       return {
