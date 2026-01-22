@@ -12,7 +12,7 @@ export {
   MempoolEvent as CardanoMempoolEvent,
   TxHash as CardanoTxHash,
   TxCbor as CardanoTxCbor,
-} from "./cardano.js";
+} from "./cardano.ts";
 export type {
   ClientBuilderOptions,
   GenericTipEvent,
@@ -20,4 +20,4 @@ export type {
   GenericTxPredicate,
   GenericTxInMempoolEvent,
   GenericUtxo,
-} from "./common.js";
+} from "./common.ts";

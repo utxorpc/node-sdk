@@ -26,7 +26,7 @@ import {
   GenericTxInMempoolEvent,
   GenericTxPredicate,
   metadataInterceptor,
-} from "./common.js";
+} from "./common.ts";
 
 export type ChainPoint = { slot: number | string; hash: string };
 export type Utxo = GenericUtxo<query.TxoRef, cardano.TxOutput>;
