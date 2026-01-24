@@ -18,8 +18,8 @@ export function metadataInterceptor(
 }
 
 export type GenericTipEvent<Block, Point> =
-  | { action: "apply"; block: Block }
-  | { action: "undo"; block: Block }
+  | { action: "apply"; block: Block, nativeBytes: Uint8Array }
+  | { action: "undo"; block: Block, nativeBytes: Uint8Array }
   | { action: "reset"; point: Point };
 
 export type GenericTxEvent<Tx, Block, BlockRef> =

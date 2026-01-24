@@ -169,12 +169,14 @@ export class SyncClient {
           yield {
             action: "apply",
             block: anyChainToBlock(any.action.value)!,
+            nativeBytes: any.action.value.nativeBytes,
           };
           break;
         case "undo":
           yield {
             action: "undo",
             block: anyChainToBlock(any.action.value)!,
+            nativeBytes: any.action.value.nativeBytes
           };
           break;
         case "reset":

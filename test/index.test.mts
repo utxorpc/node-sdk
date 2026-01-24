@@ -432,6 +432,8 @@ describe("SyncClient", () => {
         height: "3399487"
       }
     });
+    expect(block2.value?.nativeBytes).toBeInstanceOf(Uint8Array);
+    expect(block2.value?.nativeBytes).toHaveLength(864);
   });
   test("readTip", async () => {
     const tip = await syncClient.readTip();
