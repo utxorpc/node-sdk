@@ -1,5 +1,8 @@
 import { Interceptor } from "@connectrpc/connect";
 import { submit } from "@utxorpc/spec";
+
+import { Message, PartialMessage } from "@bufbuild/protobuf";
+
 export function metadataInterceptor(
   options?: ClientBuilderOptions
 ): Interceptor {
@@ -15,13 +18,14 @@ export function metadataInterceptor(
 }
 
 export type GenericTipEvent<Block, Point> =
-  | { action: "apply"; block: Block }
-  | { action: "undo"; block: Block }
+  | { action: "apply"; block: Block, nativeBytes: Uint8Array }
+  | { action: "undo"; block: Block, nativeBytes: Uint8Array }
   | { action: "reset"; point: Point };
 
-export type GenericTxEvent<Tx> =
-  | { action: "apply"; Tx: Tx | undefined }
-  | { action: "undo"; Tx: Tx | undefined };
+export type GenericTxEvent<Tx, Block, BlockRef> =
+  | { action: "apply"; Tx: Tx, Block: Block }
+  | { action: "undo"; Tx: Tx, Block: Block }
+  | { action: "idle"; BlockRef: BlockRef };
 
 export type GenericTxInMempoolEvent<Tx> = {
   stage: submit.Stage;
@@ -29,6 +33,13 @@ export type GenericTxInMempoolEvent<Tx> = {
   nativeBytes: Uint8Array<ArrayBuffer>;
   Tx: Tx | undefined;
 };
+
+export type GenericTxPredicate<Pattern extends Message<Pattern>> = {
+  match?: PartialMessage<Pattern>;
+  not?: GenericTxPredicate<Pattern>[];
+  allOf?: GenericTxPredicate<Pattern>[];
+  anyOf?: GenericTxPredicate<Pattern>[];
+}
 
 export type GenericUtxo<Ref, Parsed> = {
   txoRef: Ref;

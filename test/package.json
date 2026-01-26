@@ -4,7 +4,8 @@
   "private": true,
   "description": "Test dependencies for @utxorpc/sdk",
   "dependencies": {
-    "@blaze-cardano/sdk": "0.2.19",
-    "@utxorpc/blaze-provider": "^0.3.5"
+    "@blaze-cardano/sdk": "0.2.45",
+    "@utxorpc/blaze-provider": "^0.3.5",
+    "@utxorpc/spec": "^0.18.1"
   }
 }

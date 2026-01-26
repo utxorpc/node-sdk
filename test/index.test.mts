@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeAll } from "vitest";
-import { QueryClient, SyncClient, SubmitClient, WatchClient } from "../src/cardano";
+import { QueryClient, SyncClient, SubmitClient, WatchClient, TxEvent } from "../src/cardano";
 import { cardano } from "@utxorpc/spec";
 
 import {
@@ -23,6 +23,14 @@ const TEST_CONFIG = {
     testAddress: "addr_test1qpflhll6k7cqz2qezl080uv2szr5zwlqxsqakj4z5ldlpts4j8f56k6tyu5dqj5qlhgyrw6jakenfkkt7fd2y7rhuuuquqeeh5",
     minBalance: 6_000_000n,
     sendAmount: 5_000_000n,
+    addressTestStart: {
+      slot: 85213090,
+      hash: "e50842b1cc3ac813cb88d1533c3dea0f92e0ea945f53487c1d960c2210d0c3ba",
+    },
+    assetTestStart: {
+      slot: 74120297,
+      hash: "75f4c1fdeef23ef069580f40dbe773fab1db974a4008b9cb7ac8574a7b4129b4",
+    }
 };
 
 // Test helpers
@@ -41,6 +49,11 @@ async function createWalletAndBlaze() {
     return { provider, wallet, blaze };
 }
 
+function toCardanoBigInt(value: number): cardano.BigInt {
+  return cardano.BigInt.fromJson({
+    "int": value
+  })
+}
 
 describe("QueryClient", () => {
   let queryClient: QueryClient;
@@ -54,35 +67,35 @@ describe("QueryClient", () => {
   test("readParams", async () => {
     const params = await queryClient.readParams();
     expect(params).toEqual({
-      coinsPerUtxoByte: 4310n,
+      coinsPerUtxoByte: toCardanoBigInt(4310),
       maxTxSize: 16384n,
-      minFeeCoefficient: 44n,
-      minFeeConstant: 155381n,
+      minFeeCoefficient: toCardanoBigInt(44),
+      minFeeConstant: toCardanoBigInt(155381),
       maxBlockBodySize: 90112n,
       maxBlockHeaderSize: 1100n,
-      stakeKeyDeposit: 2000000n,
-      poolDeposit: 500000000n,
+      stakeKeyDeposit: toCardanoBigInt(2000000),
+      poolDeposit: toCardanoBigInt(500000000),
       poolRetirementEpochBound: 0n,
       desiredNumberOfPools: 500n,
-      minPoolCost: 170000000n,
+      minPoolCost: toCardanoBigInt(170000000),
       maxValueSize: 5000n,
       collateralPercentage: 150n,
       maxCollateralInputs: 3n,
-      minCommitteeSize: 0,
+      minCommitteeSize: 3,
       poolInfluence: {
-        numerator: 5033165,
-        denominator: 16777216
+        numerator: 3,
+        denominator: 10
       },
       monetaryExpansion: {
-        numerator: 6442451,
-        denominator: 2147483648
+        numerator: 3,
+        denominator: 1000
       },
       treasuryExpansion: {
-        numerator: 13421773,
-        denominator: 67108864
+        numerator: 1,
+        denominator: 5
       },
       protocolVersion: {
-        major: 9,
+        major: 10,
         minor: 0
       },
       prices: {
@@ -97,11 +110,11 @@ describe("QueryClient", () => {
       },
       maxExecutionUnitsPerTransaction: {
         steps: 10000000000n,
-        memory: 14000000n
+        memory: 16500000n
       },
       maxExecutionUnitsPerBlock: {
         steps: 20000000000n,
-        memory: 62000000n
+        memory: 72000000n
       },
       minFeeScriptRefCostPerByte: {
         numerator: 15,
@@ -132,9 +145,9 @@ describe("QueryClient", () => {
       },
       committeeTermLimit: 365n,
       governanceActionValidityPeriod: 30n,
-      governanceActionDeposit: 100000000000n,
-      drepDeposit: 500000000n,
-      drepInactivityPeriod: 20n,
+      governanceActionDeposit: toCardanoBigInt(100000000000),
+      drepDeposit: toCardanoBigInt(500000000),
+      drepInactivityPeriod: 31n,
       costModels: expect.objectContaining({
         plutusV1: expect.objectContaining({
           values: expect.arrayContaining([100788n, 420n, 1n, 1n, 1000n])
@@ -419,6 +432,8 @@ describe("SyncClient", () => {
         height: "3399487"
       }
     });
+    expect(block2.value?.nativeBytes).toBeInstanceOf(Uint8Array);
+    expect(block2.value?.nativeBytes).toHaveLength(864);
   });
   test("readTip", async () => {
     const tip = await syncClient.readTip();
@@ -478,20 +493,26 @@ describe("SyncClient", () => {
 
 describe("SubmitClient", () => {
   let submitClient: SubmitClient;
+  let wallet: HotWallet;
+  let blaze: Blaze<U5C, HotWallet>;
 
-  beforeAll(() => {
+  beforeAll(async () => {
     submitClient = new SubmitClient({
       uri: TEST_CONFIG.uri,
       headers: TEST_CONFIG.headers,
     });
+    const walletAndBlaze = await createWalletAndBlaze();
+    wallet = walletAndBlaze.wallet;
+    blaze = walletAndBlaze.blaze;
   });
 
   test("submitTx", async () => {
-    const { wallet, blaze } = await createWalletAndBlaze();
-    
     const balance = await wallet.getBalance();
     const multiasset = balance.multiasset();
     const firstAsset = multiasset?.entries().next().value;
+    if (!firstAsset) {
+      throw new Error("wallet has no non-ADA assets");
+    }
     if (balance.coin() < TEST_CONFIG.minBalance && firstAsset[1] < 0) {
       throw new Error(`Insufficient balance: ${balance.coin()} < ${TEST_CONFIG.minBalance}`);
     }
@@ -518,8 +539,6 @@ describe("SubmitClient", () => {
   });
 
   test("waitForTx", async () => {
-    const { wallet, blaze } = await createWalletAndBlaze();
-    
     const balance = await wallet.getBalance();
     if (balance.coin() < TEST_CONFIG.minBalance) {
       throw new Error(`Insufficient balance: ${balance.coin()} < ${TEST_CONFIG.minBalance}`);
@@ -550,8 +569,6 @@ describe("SubmitClient", () => {
 
   describe("watchMempool", () => {
     test("watchMempoolForAddress", async () => {
-      const { wallet, blaze } = await createWalletAndBlaze();
-      
       const balance = await wallet.getBalance();
       if (balance.coin() < TEST_CONFIG.minBalance) {
         throw new Error(`Insufficient balance: ${balance.coin()} < ${TEST_CONFIG.minBalance}`);
@@ -583,8 +600,6 @@ describe("SubmitClient", () => {
     });
 
     test("watchMempoolForDelegationPart", async () => {
-      const { wallet, blaze } = await createWalletAndBlaze();
-      
       const balance = await wallet.getBalance();
       if (balance.coin() < TEST_CONFIG.minBalance) {
         throw new Error(`Insufficient balance: ${balance.coin()} < ${TEST_CONFIG.minBalance}`);
@@ -622,8 +637,6 @@ describe("SubmitClient", () => {
     });
 
     test("watchMempoolForPaymentPart", async () => {
-      const { wallet, blaze } = await createWalletAndBlaze();
-      
       const balance = await wallet.getBalance();
       if (balance.coin() < TEST_CONFIG.minBalance) {
         throw new Error(`Insufficient balance: ${balance.coin()} < ${TEST_CONFIG.minBalance}`);
@@ -661,8 +674,6 @@ describe("SubmitClient", () => {
     });
 
     test("watchMempoolForAsset", async () => {
-      const { wallet, blaze } = await createWalletAndBlaze();
-      
       const balance = await wallet.getBalance();
       if (balance.coin() < TEST_CONFIG.minBalance) {
         throw new Error(`Insufficient balance: ${balance.coin()} < ${TEST_CONFIG.minBalance}`);
@@ -706,29 +717,21 @@ describe("WatchClient", () => {
     const testAddress = Core.Address.fromBech32(TEST_CONFIG.testAddress);
     const addressBytes = Buffer.from(testAddress.toBytes(), 'hex');
     
-    const txStream = watchClient.watchTxForAddress(addressBytes);
-    const iterator = txStream[Symbol.asyncIterator]();
-    
-    const { value: event, done } = await iterator.next();
-    
-    expect(done).toBe(false);
-    expect(['apply', 'undo']).toContain(event.action);
-    expect(event.Tx.hash.length).toBeGreaterThan(0);
+    const txStream = watchClient.watchTxForAddress(addressBytes, [TEST_CONFIG.addressTestStart]);
+    const tx = await watchForApply(txStream);
+    expect(tx.hash.length).toBeGreaterThan(0);
     
     // Convert expected address to base64 for comparison
     const expectedAddressBase64 = addressBytes.toString('base64');
     
     // Verify the transaction involves the watched address
-    const outputs = event.Tx.outputs || [];
-    if (outputs.length > 0) {
-      const hasWatchedAddress = outputs
-        .filter((output: cardano.TxOutput) => output.address)
-        .some((output: cardano.TxOutput) => {
-          const outputAddressBase64 = Buffer.from(output.address!).toString('base64');
-          return outputAddressBase64 === expectedAddressBase64;
-        });
-      expect(hasWatchedAddress).toBe(true);
-    }
+    const hasWatchedAddress = tx.outputs
+      .filter((output: cardano.TxOutput) => output.address)
+      .some((output: cardano.TxOutput) => {
+        const outputAddressBase64 = Buffer.from(output.address!).toString('base64');
+        return outputAddressBase64 === expectedAddressBase64;
+      });
+    expect(hasWatchedAddress).toBe(true);
   });
 
   test("watchTxForPaymentPart", { timeout: 120000 }, async () => {
@@ -741,27 +744,19 @@ describe("WatchClient", () => {
     
     const paymentPart = Buffer.from(paymentCred.hash, 'hex');
     
-    const txStream = watchClient.watchTxForPaymentPart(paymentPart);
-    const iterator = txStream[Symbol.asyncIterator]();
-    
-    const { value: event, done } = await iterator.next();
-    
-    expect(done).toBe(false);
-    expect(['apply', 'undo']).toContain(event.action);
-    expect(event.Tx.hash.length).toBeGreaterThan(0);
+    const txStream = watchClient.watchTxForPaymentPart(paymentPart, [TEST_CONFIG.addressTestStart]);
+    const tx = await watchForApply(txStream);
+    expect(tx.hash.length).toBeGreaterThan(0);
     
     // Verify the transaction involves addresses with the correct payment credential
-    const outputs = event.Tx.outputs || [];
-    if (outputs.length > 0) {
-      const hasCorrectPaymentCred = outputs
-        .filter((output: cardano.TxOutput) => output.address)
-        .some((output: cardano.TxOutput) => {
-          const outputAddress = Core.Address.fromBytes(Buffer.from(output.address!).toString('hex') as Core.HexBlob);
-          const outputPaymentCred = outputAddress.getProps().paymentPart;
-          return outputPaymentCred?.hash === paymentCred.hash;
-        });
-      expect(hasCorrectPaymentCred).toBe(true);
-    }
+    const hasCorrectPaymentCred = tx.outputs
+      .filter((output: cardano.TxOutput) => output.address)
+      .some((output: cardano.TxOutput) => {
+        const outputAddress = Core.Address.fromBytes(Buffer.from(output.address!).toString('hex') as Core.HexBlob);
+        const outputPaymentCred = outputAddress.getProps().paymentPart;
+        return outputPaymentCred?.hash === paymentCred.hash;
+      });
+    expect(hasCorrectPaymentCred).toBe(true);
   });
 
   test("watchTxForDelegationPart", { timeout: 120000 }, async () => {
@@ -774,95 +769,78 @@ describe("WatchClient", () => {
     
     const delegationPart = Buffer.from(delegationCred.hash, 'hex');
     
-    const txStream = watchClient.watchTxForDelegationPart(delegationPart);
-    const iterator = txStream[Symbol.asyncIterator]();
-    
-    const { value: event, done } = await iterator.next();
-    
-    expect(done).toBe(false);
-    expect(['apply', 'undo']).toContain(event.action);
-    expect(event.Tx.hash.length).toBeGreaterThan(0);
+    const txStream = watchClient.watchTxForDelegationPart(delegationPart, [TEST_CONFIG.addressTestStart]);
+    const tx = await watchForApply(txStream);
+    expect(tx.hash.length).toBeGreaterThan(0);
     
     // Verify the transaction involves addresses with the correct delegation credential
-    const outputs = event.Tx.outputs || [];
-    if (outputs.length > 0) {
-      const hasCorrectDelegationCred = outputs
-        .filter((output: cardano.TxOutput) => output.address)
-        .some((output: cardano.TxOutput) => {
-          const outputAddress = Core.Address.fromBytes(Buffer.from(output.address!).toString('hex') as Core.HexBlob);
-          const outputDelegationCred = outputAddress.getProps().delegationPart;
-          return outputDelegationCred?.hash === delegationCred.hash;
-        });
-      expect(hasCorrectDelegationCred).toBe(true);
-    }
+    const hasCorrectDelegationCred = tx.outputs
+      .filter((output: cardano.TxOutput) => output.address)
+      .some((output: cardano.TxOutput) => {
+        const outputAddress = Core.Address.fromBytes(Buffer.from(output.address!).toString('hex') as Core.HexBlob);
+        const outputDelegationCred = outputAddress.getProps().delegationPart;
+        return outputDelegationCred?.hash === delegationCred.hash;
+      });
+    expect(hasCorrectDelegationCred).toBe(true);
   });
 
   test("watchTxForAsset", { timeout: 120000 }, async () => {
-    // The assetName parameter contains both policyId and asset name concatenated
-    const assetName = Buffer.from("8b05e87a51c1d4a0fa888d2bb14dbc25e8c343ea379a171b63aa84a0434e4354", "hex");
-    const expectedPolicyId = assetName.subarray(0, 28);
-    const expectedAssetNameOnly = assetName.subarray(28);
+    const policyId = Buffer.from("8b05e87a51c1d4a0fa888d2bb14dbc25e8c343ea379a171b63aa84a0", "hex");
+    const assetName = Buffer.from("434e4354", "hex");
     
-    const expectedPolicyIdBase64 = expectedPolicyId.toString('base64');
-    const expectedAssetNameBase64 = expectedAssetNameOnly.toString('base64');
+    const expectedPolicyIdBase64 = policyId.toString('base64');
+    const expectedAssetNameBase64 = assetName.toString('base64');
     
-    const txStream = watchClient.watchTxForAsset(undefined, assetName);
-    const iterator = txStream[Symbol.asyncIterator]();
-    
-    const { value: event, done } = await iterator.next();
-    
-    expect(done).toBe(false);
-    expect(['apply', 'undo']).toContain(event.action);
-    expect(event.Tx.hash.length).toBeGreaterThan(0);
+    const txStream = watchClient.watchTxForAsset(policyId, assetName, [TEST_CONFIG.assetTestStart]);
+    const tx = await watchForApply(txStream);
+    expect(tx.hash.length).toBeGreaterThan(0);
     
     // Verify the transaction involves the expected asset
-    const outputs = event.Tx.outputs || [];
-    const outputsWithAssets = outputs.filter((output: cardano.TxOutput) => output.assets);
+    const outputsWithAssets = tx.outputs.filter((output: cardano.TxOutput) => output.assets);
     
-    if (outputsWithAssets.length > 0) {
-      const hasExpectedAsset = outputsWithAssets.some((output: cardano.TxOutput) => {
-        return output.assets!.some((assetGroup: cardano.Multiasset) => {
-          const assetPolicyIdBase64 = Buffer.from(assetGroup.policyId).toString('base64');
-          if (assetPolicyIdBase64 === expectedPolicyIdBase64) {
-            return assetGroup.assets && assetGroup.assets.some((asset: cardano.Asset) => {
-              const assetNameBase64 = asset.name ? Buffer.from(asset.name).toString('base64') : '';
-              return assetNameBase64 === expectedAssetNameBase64;
-            });
-          }
-          return false;
-        });
+    const hasExpectedAsset = outputsWithAssets.some((output: cardano.TxOutput) => {
+      return output.assets!.some((assetGroup: cardano.Multiasset) => {
+        const assetPolicyIdBase64 = Buffer.from(assetGroup.policyId).toString('base64');
+        if (assetPolicyIdBase64 === expectedPolicyIdBase64) {
+          return assetGroup.assets && assetGroup.assets.some((asset: cardano.Asset) => {
+            const assetNameBase64 = asset.name ? Buffer.from(asset.name).toString('base64') : '';
+            return assetNameBase64 === expectedAssetNameBase64;
+          });
+        }
+        return false;
       });
-      expect(hasExpectedAsset).toBe(true);
-    }
+    });
+    expect(hasExpectedAsset).toBe(true);
   });
 
   test("watchTxForPolicyId", { timeout: 120000 }, async () => {
     const policyId = Buffer.from("8b05e87a51c1d4a0fa888d2bb14dbc25e8c343ea379a171b63aa84a0", "hex");
     
-    const txStream = watchClient.watchTxForAsset(policyId, undefined);
-    const iterator = txStream[Symbol.asyncIterator]();
-    
-    const { value: event, done } = await iterator.next();
-    
-    expect(done).toBe(false);
-    expect(['apply', 'undo']).toContain(event.action);
-    expect(event.Tx.hash.length).toBeGreaterThan(0);
+    const txStream = watchClient.watchTxForAsset(policyId, undefined, [TEST_CONFIG.assetTestStart]);
+    const tx = await watchForApply(txStream);
+    expect(tx.hash.length).toBeGreaterThan(0);
     
     // Convert policy ID to base64 for comparison
     const expectedPolicyIdBase64 = policyId.toString('base64');
     
     // Verify the transaction involves assets with the expected policy ID
-    const outputs = event.Tx.outputs || [];
-    const outputsWithAssets = outputs.filter((output: cardano.TxOutput) => output.assets);
+    const outputsWithAssets = tx.outputs.filter((output: cardano.TxOutput) => output.assets);
     
-    if (outputsWithAssets.length > 0) {
-      const hasExpectedPolicy = outputsWithAssets.some((output: cardano.TxOutput) => {
-        return output.assets!.some((assetGroup: cardano.Multiasset) => {
-          const assetPolicyIdBase64 = Buffer.from(assetGroup.policyId).toString('base64');
-          return assetPolicyIdBase64 === expectedPolicyIdBase64;
-        });
+    const hasExpectedPolicy = outputsWithAssets.some((output: cardano.TxOutput) => {
+      return output.assets!.some((assetGroup: cardano.Multiasset) => {
+        const assetPolicyIdBase64 = Buffer.from(assetGroup.policyId).toString('base64');
+        return assetPolicyIdBase64 === expectedPolicyIdBase64;
       });
-      expect(hasExpectedPolicy).toBe(true);
-    }
+    });
+    expect(hasExpectedPolicy).toBe(true);
   });
+
+  async function watchForApply(txStream: AsyncIterable<TxEvent>): Promise<cardano.Tx> {
+    for await (const value of txStream) {
+      if (value.action === "apply") {
+        return value.Tx!;
+      }
+    }
+    throw new Error("Stream closed before apply was seen");
+  }
 });
