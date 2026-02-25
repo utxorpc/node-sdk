@@ -29,6 +29,7 @@ import {
 } from "./common.ts";
 
 export type ChainPoint = { slot: number | string; hash: string };
+export type BlockRefLike = ChainPoint | sync.BlockRef;
 export type Utxo = GenericUtxo<query.TxoRef, cardano.TxOutput>;
 export type TipEvent = GenericTipEvent<cardano.Block, ChainPoint>;
 export type TxEvent = GenericTxEvent<cardano.Tx, cardano.Block, watch.BlockRef>;
@@ -105,7 +106,8 @@ function anyChainToBlockWithBytes(msg: sync.AnyChainBlock): Block | null {
   return null;
 }
 
-function pointToBlockRef(p: ChainPoint) {
+function toBlockRef(p: BlockRefLike): sync.BlockRef {
+  if (p instanceof sync.BlockRef) return p;
   return new sync.BlockRef({
     slot: BigInt(p.slot),
     hash: new Uint8Array(Buffer.from(p.hash, "hex")),
@@ -156,9 +158,9 @@ export class SyncClient {
     this.inner = createPromiseClient(syncConnect.SyncService, transport);
   }
 
-  async *followTip(intersect?: ChainPoint[]): AsyncIterable<TipEvent> {
+  async *followTip(intersect?: BlockRefLike[]): AsyncIterable<TipEvent> {
     const req = new sync.FollowTipRequest({
-      intersect: intersect?.map((p) => pointToBlockRef(p)),
+      intersect: intersect?.map((p) => toBlockRef(p)),
     });
 
     const res = this.inner.followTip(req);
@@ -193,18 +195,15 @@ export class SyncClient {
     return blockRefToPoint(res.tip!);
   }
 
-  async fetchBlock(p: ChainPoint): Promise<Block> {
-    const req = pointToBlockRef(p);
+  async fetchBlock(p: BlockRefLike): Promise<Block> {
+    const req = toBlockRef(p);
     const res = await this.inner.fetchBlock({ ref: [req] });
     return anyChainToBlockWithBytes(res.block[0])!;
   }
 
-  async fetchHistory(p: ChainPoint | undefined, maxItems = 1): Promise<Block[]> {
+  async fetchHistory(p: BlockRefLike | undefined, maxItems = 1): Promise<Block[]> {
     const req = new sync.DumpHistoryRequest({
-      startToken: p ? new sync.BlockRef({
-        slot: BigInt(p.slot),
-        hash: Buffer.from(p.hash, "hex"),
-      }) : undefined,
+      startToken: p ? toBlockRef(p) : undefined,
       maxItems: maxItems,
     });
 
@@ -474,10 +473,10 @@ export class WatchClient {
 
   async *watchTxByPredicate(
     predicate: TxPredicate,
-    intersect?: ChainPoint[]
+    intersect?: BlockRefLike[]
   ): AsyncIterable<TxEvent> {
     const request: watch.WatchTxRequest = new watch.WatchTxRequest({
-      intersect: intersect ? intersect.map(pointToBlockRef) : [],
+      intersect: intersect ? intersect.map(toBlockRef) : [],
       predicate: toTxPredicate(predicate),
     });
 
@@ -490,20 +489,20 @@ export class WatchClient {
 
   async *watchTxByMatch(
     pattern: PartialMessage<cardano.TxPattern>,
-    intersect?: ChainPoint[]
+    intersect?: BlockRefLike[]
   ): AsyncIterable<TxEvent> {
     const predicate = { match: pattern }
     yield* this.watchTxByPredicate(predicate, intersect);
   }
 
-  async *watchTx(intersect?: ChainPoint[]): AsyncIterable<TxEvent> {
+  async *watchTx(intersect?: BlockRefLike[]): AsyncIterable<TxEvent> {
     const pattern = {};
     yield* this.watchTxByMatch(pattern, intersect);
   }
 
   async *watchTxForAddress(
     address: Uint8Array<ArrayBuffer>,
-    intersect?: ChainPoint[]
+    intersect?: BlockRefLike[]
   ): AsyncIterable<TxEvent> {
     const pattern = { hasAddress: { exactAddress: address } };
     yield* this.watchTxByMatch(pattern, intersect);
@@ -511,7 +510,7 @@ export class WatchClient {
 
   async *watchTxForPaymentPart(
     paymentPart: Uint8Array<ArrayBuffer>,
-    intersect?: ChainPoint[]
+    intersect?: BlockRefLike[]
   ): AsyncIterable<TxEvent> {
     const pattern = { hasAddress: { paymentPart } };
     yield* this.watchTxByMatch(pattern, intersect);
@@ -519,7 +518,7 @@ export class WatchClient {
 
   async *watchTxForDelegationPart(
     delegationPart: Uint8Array<ArrayBuffer>,
-    intersect?: ChainPoint[]
+    intersect?: BlockRefLike[]
   ): AsyncIterable<TxEvent> {
     const pattern = { hasAddress: { delegationPart } };
     yield* this.watchTxByMatch(pattern, intersect);
@@ -528,7 +527,7 @@ export class WatchClient {
   async *watchTxForAsset(
     policyId?: Uint8Array<ArrayBuffer>,
     assetName?: Uint8Array<ArrayBuffer>,
-    intersect?: ChainPoint[]
+    intersect?: BlockRefLike[]
   ): AsyncIterable<TxEvent> {
     const pattern = { movesAsset: { policyId, assetName } };
     yield* this.watchTxByMatch(pattern, intersect);

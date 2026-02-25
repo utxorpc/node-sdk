@@ -4,6 +4,7 @@ export {
   SubmitClient as CardanoSubmitClient,
   WatchClient as CardanoWatchClient,
   ChainPoint as CardanoChainPoint,
+  BlockRefLike as CardanoBlockRefLike,
   Block as CardanoBlock,
   Utxo as CardanoUtxo,
   TipEvent as CardanoTipEvent,
