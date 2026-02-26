@@ -31,7 +31,7 @@ import {
 export type ChainPoint = { slot: number | string; hash: string };
 export type Utxo = GenericUtxo<query.TxoRef, cardano.TxOutput>;
 export type TipEvent = GenericTipEvent<cardano.Block, ChainPoint>;
-export type TxEvent = GenericTxEvent<cardano.Tx, watch.BlockRef>;
+export type TxEvent = GenericTxEvent<cardano.Tx, cardano.Block, watch.BlockRef>;
 export type TxPredicate = GenericTxPredicate<cardano.TxPattern>;
 export type MempoolEvent = GenericTxInMempoolEvent<cardano.Tx>;
 export type TxHash = Uint8Array;
@@ -53,20 +53,26 @@ function toMempoolEvent(txInMempool: submit.TxInMempool): MempoolEvent {
   };
 }
 function toTxEvent(response: watch.WatchTxResponse): TxEvent {
-  switch (response.action.case) {
+  const { action: { case: actionCase, value: actionValue  } } = response;
+  switch (actionCase) {
     case "apply":
     case "undo":
-      if (response.action.value.chain.case !== "cardano") {
-        throw new Error(`Unexpected tx chain response (expected "cardano", saw "${response.action.value.chain.case}")`);
+      const {chain: {case: txChain, value: txValue}, block: {chain: {case: blockChain, value: blockValue} = {}} = {}} = actionValue
+      if (txChain !== "cardano") {
+        throw new Error(`Unexpected tx chain response (expected "cardano", saw "${txChain}")`);
+      }
+      if (blockChain !== undefined && blockChain !== "cardano") {
+        throw new Error(`Unexpected block chain response (expected "cardano", saw "${blockChain ?? "<none>"}")`);
       }
       return {
-        action: response.action.case,
-        Tx: response.action.value.chain.value,
+        action: actionCase,
+        Tx: txValue,
+        Block: blockValue
       }
     case "idle":
       return {
         action: "idle",
-        BlockRef: response.action.value,
+        BlockRef: actionValue,
       }
     default:
       throw new Error("Unrecognized TX event");
