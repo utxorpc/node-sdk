@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeAll } from "vitest";
 import { QueryClient, SyncClient, SubmitClient, WatchClient, TxEvent } from "../src/cardano";
-import { cardano } from "@utxorpc/spec";
+import { cardano, sync } from "@utxorpc/spec";
 
 import {
     Bip32PrivateKey,
@@ -477,9 +477,42 @@ describe("SyncClient", () => {
     expect(firstBlock.nativeBytes).toBeInstanceOf(Uint8Array);
     expect(firstBlock.nativeBytes.length).toBeGreaterThan(0);
     
-    expect({ 
-      body: firstBlock.parsedBlock.body?.toJson(), 
-      header: firstBlock.parsedBlock.header?.toJson() 
+    expect({
+      body: firstBlock.parsedBlock.body?.toJson(),
+      header: firstBlock.parsedBlock.header?.toJson()
+    }).toEqual({
+      body: {},
+      header: {
+        slot: "85213090",
+        hash: "5QhCscw6yBPLiNFTPD3qD5Lg6pRfU0h8HZYMIhDQw7o=",
+        height: "3399486"
+      }
+    });
+  });
+  test("followTip with BlockRef (slot-only)", async () => {
+    const blockRef = new sync.BlockRef({
+      slot: 85213090n,
+    });
+    const generator = syncClient.followTip([blockRef]);
+    const iterator = generator[Symbol.asyncIterator]();
+
+    const block1 = await iterator.next();
+    expect(block1.done).toBe(false);
+    expect(block1.value).toBeDefined();
+  });
+  test("fetchBlock with BlockRef", async () => {
+    const blockRef = new sync.BlockRef({
+      slot: 85213090n,
+      hash: new Uint8Array(Buffer.from('e50842b1cc3ac813cb88d1533c3dea0f92e0ea945f53487c1d960c2210d0c3ba', 'hex')),
+    });
+    const blockWithBytes = await syncClient.fetchBlock(blockRef);
+
+    expect(blockWithBytes.nativeBytes).toBeInstanceOf(Uint8Array);
+    expect(blockWithBytes.nativeBytes.length).toBeGreaterThan(0);
+
+    expect({
+      body: blockWithBytes.parsedBlock.body?.toJson(),
+      header: blockWithBytes.parsedBlock.header?.toJson()
     }).toEqual({
       body: {},
       header: {
