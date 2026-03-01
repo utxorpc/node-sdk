@@ -23,8 +23,8 @@ export type GenericTipEvent<Block, Point> =
   | { action: "reset"; point: Point };
 
 export type GenericTxEvent<Tx, Block, BlockRef> =
-  | { action: "apply"; Tx: Tx, Block: Block }
-  | { action: "undo"; Tx: Tx, Block: Block }
+  | { action: "apply"; Tx: Tx, Block: Block | undefined }
+  | { action: "undo"; Tx: Tx, Block: Block | undefined  }
   | { action: "idle"; BlockRef: BlockRef };
 
 export type GenericTxInMempoolEvent<Tx> = {

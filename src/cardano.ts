@@ -54,24 +54,26 @@ function toMempoolEvent(txInMempool: submit.TxInMempool): MempoolEvent {
   };
 }
 function toTxEvent(response: watch.WatchTxResponse): TxEvent {
-  switch (response.action.case) {
+  const { action: { case: actionCase, value: actionValue  } } = response;
+  switch (actionCase) {
     case "apply":
     case "undo":
-      if (response.action.value.chain.case !== "cardano") {
-        throw new Error(`Unexpected tx chain response (expected "cardano", saw "${response.action.value.chain.case}")`);
+      const {chain: {case: txChain, value: txValue}, block: {chain: {case: blockChain, value: blockValue} = {}} = {}} = actionValue
+      if (txChain !== "cardano") {
+        throw new Error(`Unexpected tx chain response (expected "cardano", saw "${txChain}")`);
       }
-      if (response.action.value.block?.chain?.case !== "cardano") {
-        throw new Error(`Unexpected block chain response (expected "cardano", saw "${response.action.value.block?.chain?.case ?? "<none>"}")`);
+      if (blockChain !== undefined && blockChain !== "cardano") {
+        throw new Error(`Unexpected block chain response (expected "cardano", saw "${blockChain ?? "<none>"}")`);
       }
       return {
-        action: response.action.case,
-        Tx: response.action.value.chain.value,
-        Block: response.action.value.block.chain.value,
+        action: actionCase,
+        Tx: txValue,
+        Block: blockValue
       }
     case "idle":
       return {
         action: "idle",
-        BlockRef: response.action.value,
+        BlockRef: actionValue,
       }
     default:
       throw new Error("Unrecognized TX event");
@@ -342,21 +344,21 @@ export class QueryClient {
 
   async readGenesis(): Promise<cardano.Genesis> {
     const res = await this.inner.readGenesis({});
-    
+
     if (!res.config || res.config.case !== "cardano") {
       throw new Error("Genesis config is not Cardano data");
     }
-    
+
     return res.config.value;
   }
 
   async readErasummary(): Promise<cardano.EraSummary[]> {
     const res = await this.inner.readEraSummary({});
-    
+
     if (!res.summary || res.summary.case !== "cardano") {
       throw new Error("Era summary is not Cardano data");
     }
-    
+
     return res.summary.value.summaries;
   }
 }
@@ -388,7 +390,7 @@ export class SubmitClient {
     const res = await this.inner.evalTx({
       tx: { type: { case: "raw", value: tx } },
     });
-    
+
     return res;
   }
 
