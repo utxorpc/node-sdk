@@ -27,4 +27,7 @@ jobs:
           node-version: 20
       # The repo gitignores its lockfile, so `npm ci` / cache: npm cannot be used.
       - run: npm install
-      - run: npx vitest run --passWithNoTests
+      # test/index.test.mts is a live-server integration suite (needs a server
+      # on :50051 + @blaze-cardano deps); excluded from CI like the rust/dotnet
+      # integration suites. No offline-runnable tests remain today.
+      - run: npx vitest run --passWithNoTests --exclude '**/index.test.mts'
