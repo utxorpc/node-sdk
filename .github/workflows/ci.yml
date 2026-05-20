@@ -13,8 +13,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
-      - run: npm ci
+      # The repo gitignores its lockfile, so `npm ci` / cache: npm cannot be used.
+      - run: npm install
       - run: npm run build
 
   test:
@@ -25,6 +25,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
-      - run: npm ci
+      # The repo gitignores its lockfile, so `npm ci` / cache: npm cannot be used.
+      - run: npm install
       - run: npx vitest run --passWithNoTests
