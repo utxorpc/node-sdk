@@ -1,0 +1,33 @@
+name: CI
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      # The repo gitignores its lockfile, so `npm ci` / cache: npm cannot be used.
+      - run: npm install
+      - run: npm run build
+
+  test:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      # The repo gitignores its lockfile, so `npm ci` / cache: npm cannot be used.
+      - run: npm install
+      # test/index.test.mts is a live-server integration suite (needs a server
+      # on :50051 + @blaze-cardano deps); excluded from CI like the rust/dotnet
+      # integration suites. No offline-runnable tests remain today.
+      - run: npx vitest run --passWithNoTests --exclude '**/index.test.mts'
