@@ -1,0 +1,64 @@
+name: Release
+
+# Conforms to the umbrella SDK release pipeline contract:
+# u5c-factory reference/sdk-pipeline-requirements.md
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify tag matches package version
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          MANIFEST=$(jq -r .version package.json)
+          if [ "$TAG" != "$MANIFEST" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match package.json version $MANIFEST"
+            exit 1
+          fi
+
+  build:
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          # Node 24.5.0 bundles npm 11.5.1, the minimum for OIDC trusted
+          # publishing used by the publish job below.
+          node-version: 24.5.0
+      # The repo gitignores its lockfile, so `npm ci` cannot be used.
+      - run: npm install
+      - run: npm run build
+
+  test:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.5.0
+      - run: npm install
+      # index.test.mts is a live-server integration suite, excluded as in ci.yml.
+      - run: npx vitest run --passWithNoTests --exclude '**/index.test.mts'
+
+  publish:
+    needs: test
+    runs-on: ubuntu-latest
+    # Required for npm OIDC trusted publishing — no static token is used.
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.5.0
+          registry-url: 'https://registry.npmjs.org'
+      - run: npm install
+      - run: npm run build
+      - run: npm publish --access public
