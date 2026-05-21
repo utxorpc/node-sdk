@@ -1,7 +1,7 @@
 name: Release
 
 # Conforms to the umbrella SDK release pipeline contract:
-# u5c-factory reference/sdk-pipeline-requirements.md
+# u5c-factory reference/sdk-pipeline.md
 on:
   push:
     tags: ['v*']
