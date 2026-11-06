@@ -3,7 +3,7 @@ import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { cardano } from '@utxorpc/spec'
 
-const dir = path.join(__dirname, 'protocol-vectors')
+const dir = path.join(__dirname, 'vectors', 'cardano')
 
 const rows = readFileSync(path.join(dir, 'vectors.tsv'), 'utf8')
   .trim()
@@ -14,7 +14,7 @@ const rows = readFileSync(path.join(dir, 'vectors.tsv'), 'utf8')
 
 const hex = (bytes: Uint8Array) => Buffer.from(bytes).toString('hex')
 
-describe('protocol vectors', () => {
+describe('cardano vectors', () => {
   it.each(rows)('decodes $name', ({ name, slot, hash, txCount, firstTxHash }) => {
     const raw = readFileSync(path.join(dir, 'v1alpha', `${name}.pb`))
 
